@@ -65,7 +65,9 @@ public class Reach extends Check implements PacketCheck {
     private final Int2ObjectMap<InteractionData> playerAttackQueue = new Int2ObjectOpenHashMap<>();
     private boolean cancelImpossibleHits;
     private double threshold;
-    private double cancelBuffer; // For the next 4 hits after using reach, we aggressively cancel reach
+    private double hitboxExtraExpansion;
+    private double reachExtraExpansion;
+    private final java.util.HashMap<Integer, Double> cancelBuffers = new java.util.HashMap<>();
 
     public Reach(GrimPlayer player) {
         super(player);
@@ -96,8 +98,8 @@ public class Reach extends Check implements PacketCheck {
                 return;
             }
 
-            // Dead entities cause false flags (https://github.com/GrimAnticheat/Grim/issues/546)
-            if (entity.isDead) return;
+            // Dead or unhittable entities cause false flags
+            if (!entity.canHit()) return;
 
             // TODO: Remove when in front of via
             if (entity.type == EntityTypes.ARMOR_STAND && player.getClientVersion().isOlderThan(ClientVersion.V_1_8))
@@ -171,7 +173,7 @@ public class Reach extends Check implements PacketCheck {
                 )); // Queue for next tick for very precise check
             }
 
-            boolean knownInvalid = isKnownInvalid(entity, hasRange, maxReach, hitboxMargin);
+            boolean knownInvalid = isKnownInvalid(action.getEntityId(), entity, hasRange, maxReach, hitboxMargin);
 
             if ((shouldModifyPackets() && cancelImpossibleHits && knownInvalid) || tooManyAttacks) {
                 event.setCancelled(true);
@@ -193,7 +195,7 @@ public class Reach extends Check implements PacketCheck {
     // than this method.  If this method flags, the other method WILL flag.
     //
     // Meaning that the other check should be the only one that flags.
-    private boolean isKnownInvalid(PacketEntity reachEntity, boolean hasAttackRange, float itemMaxReach, float itemHitboxMargin) {
+    private boolean isKnownInvalid(int entityId, PacketEntity reachEntity, boolean hasAttackRange, float itemMaxReach, float itemHitboxMargin) {
         // If the entity doesn't exist, or if it is exempt, or if it is dead
         if ((blacklisted.contains(reachEntity.type) || !reachEntity.isLivingEntity) && reachEntity.type != EntityTypes.END_CRYSTAL)
             return false; // exempt
@@ -202,9 +204,10 @@ public class Reach extends Check implements PacketCheck {
             return false;
         if (player.inVehicle()) return false;
 
+        double buffer = cancelBuffers.getOrDefault(entityId, 0.0);
         // Filter out what we assume to be cheats
-        if (cancelBuffer != 0) {
-            CheckResult result = checkReach(reachEntity, player.x, player.y, player.z, hasAttackRange, itemMaxReach, itemHitboxMargin, true);
+        if (buffer != 0) {
+            CheckResult result = checkReach(entityId, reachEntity, player.x, player.y, player.z, hasAttackRange, itemMaxReach, itemHitboxMargin, false);
             return result.isFlag(); // If they flagged
         } else {
             SimpleCollisionBox targetBox = getTargetBox(reachEntity);
@@ -219,8 +222,9 @@ public class Reach extends Check implements PacketCheck {
             PacketEntity reachEntity = player.compensatedEntities.entityMap.get(attack.getIntKey());
             if (reachEntity == null) continue;
 
+            int entityId = attack.getIntKey();
             InteractionData interactionData = attack.getValue();
-            CheckResult result = checkReach(reachEntity, interactionData.x, interactionData.y, interactionData.z, interactionData.hasAttackRange, interactionData.maxReach, interactionData.hitboxMargin, false);
+            CheckResult result = checkReach(entityId, reachEntity, interactionData.x, interactionData.y, interactionData.z, interactionData.hasAttackRange, interactionData.maxReach, interactionData.hitboxMargin, false);
             switch (result.type()) {
                 case REACH -> {
                     String added = ", type=" + reachEntity.type.getName().getKey();
@@ -230,7 +234,7 @@ public class Reach extends Check implements PacketCheck {
                     flagAndAlert(result.verbose() + added);
                 }
                 case HITBOX -> {
-                    String added = "type=" + reachEntity.type.getName().getKey();
+                    String added = ", type=" + reachEntity.type.getName().getKey();
                     if (reachEntity instanceof PacketEntitySizeable sizeable) {
                         added += ", size=" + sizeable.size;
                     }
@@ -240,13 +244,15 @@ public class Reach extends Check implements PacketCheck {
         }
 
         playerAttackQueue.clear();
+        cancelBuffers.keySet().removeIf(id -> !player.compensatedEntities.entityMap.containsKey(id));
     }
 
     @NotNull
-    private CheckResult checkReach(PacketEntity reachEntity, double x, double y, double z, boolean hasAttackRange, float itemMaxReach, float itemHitboxMargin, boolean isPrediction) {
+    private CheckResult checkReach(int entityId, PacketEntity reachEntity, double x, double y, double z, boolean hasAttackRange, float itemMaxReach, float itemHitboxMargin, boolean isPrediction) {
         SimpleCollisionBox targetBox = getTargetBox(reachEntity);
 
         double maxReach = applyReachModifiers(targetBox, hasAttackRange, itemMaxReach, itemHitboxMargin, !player.packetStateData.didLastLastMovementIncludePosition);
+        if (hitboxExtraExpansion > 0) targetBox.expand(hitboxExtraExpansion);
         double minDistance = Double.MAX_VALUE;
 
         // https://bugs.mojang.com/browse/MC-67665
@@ -293,13 +299,18 @@ public class Reach extends Check implements PacketCheck {
         // if the entity is not exempt and the entity is alive
         if ((!blacklisted.contains(reachEntity.type) && reachEntity.isLivingEntity) || reachEntity.type == EntityTypes.END_CRYSTAL) {
             if (minDistance == Double.MAX_VALUE) {
-                cancelBuffer = 1;
+                cancelBuffers.put(entityId, 1.0);
                 return new CheckResult(ResultType.HITBOX, "");
             } else if (minDistance > maxReach) {
-                cancelBuffer = 1;
+                cancelBuffers.put(entityId, 1.0);
                 return new CheckResult(ResultType.REACH, String.format("%.5f", minDistance) + " blocks");
             } else {
-                cancelBuffer = Math.max(0, cancelBuffer - 0.25);
+                double buf = cancelBuffers.getOrDefault(entityId, 0.0);
+                if (buf > 0) {
+                    buf = Math.max(0, buf - 0.25);
+                    if (buf == 0) cancelBuffers.remove(entityId);
+                    else cancelBuffers.put(entityId, buf);
+                }
             }
         }
 
@@ -341,6 +352,7 @@ public class Reach extends Check implements PacketCheck {
             hitboxMargin += player.getMovementThreshold();
         }
 
+        hitboxMargin += reachExtraExpansion;
         targetBox.expand(hitboxMargin);
 
         return maxReach;
@@ -350,6 +362,8 @@ public class Reach extends Check implements PacketCheck {
     public void onReload(ConfigManager config) {
         this.cancelImpossibleHits = config.getBooleanElse("Reach.block-impossible-hits", true);
         this.threshold = config.getDoubleElse("Reach.threshold", 0.0005);
+        this.reachExtraExpansion = config.getDoubleElse("Reach.extra-expansion", 0.0);
+        this.hitboxExtraExpansion = config.getDoubleElse("Hitboxes.extra-expansion", 0.0);
     }
 
     private enum ResultType {

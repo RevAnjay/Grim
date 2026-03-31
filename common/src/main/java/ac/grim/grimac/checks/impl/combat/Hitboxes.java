@@ -4,7 +4,7 @@ import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.player.GrimPlayer;
 
-@CheckData(name = "Hitboxes", setback = 10)
+@CheckData(name = "Hitboxes", setback = 10, decay = 0.15)
 public class Hitboxes extends Check {
     public Hitboxes(GrimPlayer player) {
         super(player);
