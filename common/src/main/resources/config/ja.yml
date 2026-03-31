@@ -62,7 +62,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # 重複パケットの回転を無視するかどうか。
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # プレイヤーが違反をしていない場合、違反の度合いをどれだけ減らすかの倍率。
@@ -167,6 +167,24 @@ VehicleTimer:
 PacketOrderI:
     # プレイヤーが1.7のアニメーションMODを使用したことで検出されている場合に有効にします
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # BehaviorB（攻撃タイミングの一貫性チェック）をプレイヤーへの攻撃のみに限定しますか?
+        # trueの場合、モブへの攻撃は分析されません
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # ヒットボックスをどれだけ拡大するかを設定します。0.0005に設定することで3.0005以上のリーチを検出できます

@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Czy ignorować rotację w zduplikowanych pakietach
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # O ile powinniśmy pomnożyć całkowitą przewagę, gdy gracz gra zgodnie z zasadami?
@@ -162,6 +162,24 @@ VehicleTimer:
 PacketOrderI:
     # Włącz, jeśli gracze są oznaczani za używanie modów do animacji z 1.7.
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # Czy BehaviorB (spójność rytmu ataku) powinien sprawdzać tylko ataki na graczy?
+        # Gdy włączone, uderzenia w moby nie będą analizowane
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # O ile powinniśmy zwiększyć hitboxy? 0.0005 powinno wykrywać zasięg 3.0005+.

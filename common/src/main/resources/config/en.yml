@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Whether or not to ignore the rotation in duplicate packets
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # How much should we multiply total advantage by when the player is legit
@@ -163,12 +163,56 @@ PacketOrderI:
     # enable if players are getting flagged for using 1.7 animations mods
     exempt-placing-while-digging: false
 
+Behavior:
+    b:
+        # Should BehaviorB (attack timing consistency) only check attacks against players?
+        # When true, hitting mobs will not be analyzed
+        players-only: true
+        # Debug mode: alerts every hit with stdDev, mean, interval values
+        debug: false
+    c:
+        # Should BehaviorC (min-max spread) only check attacks against players?
+        players-only: true
+        # Debug mode: alerts every hit with spread, min, max values
+        debug: false
+        # Maximum allowed spread (max - min interval) in ms before flagging
+        spread-threshold: 60
+    d:
+        # Minimum angle (degrees) between look direction and entity to flag as no-rotation attack
+        # 90 = flag only when clearly not looking at target
+        # 60 = stricter, catches more subtle norot
+        # 45 = very strict, may false on fast snaps
+        angle-threshold: 45.0
+        # Only check attacks against players?
+        players-only: true
+        # Debug mode: logs every attack with angle value
+        debug: false
+
+    e:
+        # Detects triggerbots that attack at perfect fall distance for critical hits
+        # Based on concept by DarknessAC (KillAura P)
+        players-only: true
+        debug: false
+        # How many consecutive identical fractional Y positions before flagging
+        # Higher = fewer false positives, lower = faster detection
+        buffer-threshold: 15
+
+Hitboxes:
+    # Extra hitbox expansion (blocks) applied on top of Reach's expansion
+    # when checking if a ray intersects the entity hitbox.
+    # Increase this if Hitboxes false-flags on your server due to interpolation desync.
+    # 0.0 = strict (original Grim behavior), 0.1 = lenient, 0.2+ = very lenient
+    extra-expansion: 0.0
+
 Reach:
     # How much should we expand hitboxes by? 0.0005 should detect 3.0005+ reach
     #
     # There is 0.03 forced expansion with 1.9-1.18.1 (not 1.18.2), or some client/server combinations due to
     # protocol changes and limitations. This check is most powerful with 1.7/1.8 clients on 1.8 servers.
     threshold: 0.0005
+    # Extra hitbox expansion (blocks) for reach distance checks.
+    # Increase if Reach false-flags due to lag/interpolation. 0.0 = default (strict).
+    extra-expansion: 0.0
     # Should we cancel hits that we know are impossible?
     # 3.00-3.03 hits may go through but still be flagged, due to packet order limitations
     block-impossible-hits: true

@@ -61,7 +61,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Deve-se ignorar rotação em pacotes duplicados?
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # Por quanto deve-se multiplicar a vantagem desde a última vez que falhou uma verificação?
@@ -165,6 +165,24 @@ VehicleTimer:
 PacketOrderI:
     # Ativar se os jogadores estão sendo sinalizados por usar mods de animação 1.7
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # O BehaviorB (consistência do ritmo de ataque) deve verificar apenas ataques contra jogadores?
+        # Quando ativado, golpes em mobs não serão analisados
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # Por quanto deve-se expandir as caixas de colisão? 0.0005 deve detectar 3.0005+ de alcance.

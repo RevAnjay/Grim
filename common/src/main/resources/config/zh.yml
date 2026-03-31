@@ -63,7 +63,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # 是否忽视重复的数据包中的玩家转头
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # 这个检查通过仿真玩家的移动，并与玩家的实际移动进行比较
@@ -184,6 +184,24 @@ VehicleTimer:
 PacketOrderI:
     # 如果玩家因使用1.7动画模组而误判，则启用此项
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # BehaviorB（攻击节奏一致性检查）是否只检查对玩家的攻击？
+        # 设为 true 时，对生物的攻击将不会被分析
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     threshold: 0.0005

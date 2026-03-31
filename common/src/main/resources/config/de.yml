@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Whether or not to ignore the rotation in duplicate packets
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # Mit wie viel soll der Gesamtvorteil multipliziert werden, wenn der Spieler legitim ist.
@@ -165,6 +165,24 @@ VehicleC:
 PacketOrderI:
     # Aktivieren, wenn Spieler markiert werden, weil sie 1.7-Animationsmods verwenden
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # Soll BehaviorB (Konsistenz des Angriffsrhythmus) nur Angriffe gegen Spieler prüfen?
+        # Wenn aktiviert, werden Angriffe auf Mobs nicht analysiert
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # Um wie viel sollen wir die Hitboxen erweitern? 0,0005 sollte 3,0005+ Reichweite erkennen

@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Whether or not to ignore the rotation in duplicate packets
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # На сколько мы должны умножить общее преимущество, когда игрок легален.
@@ -163,6 +163,24 @@ VehicleTimer:
 PacketOrderI:
     # Включить, если игроки помечаются из-за использования модов анимации 1.7
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # Должна ли проверка BehaviorB (стабильность тайминга атак) проверять только атаки по игрокам?
+        # Если true, удары по мобам не будут анализироваться
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # На сколько мы должны расширить хитбоксы? 0.0005 должно определять 3.0005+ дополнительное достижение

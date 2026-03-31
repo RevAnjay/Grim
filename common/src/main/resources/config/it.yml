@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Whether or not to ignore the rotation in duplicate packets
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # Riduce gradualmente l'avanzamento totale del giocatore quando è legittimo
@@ -153,6 +153,24 @@ VehicleTimer:
 PacketOrderI:
     # Abilitare se i giocatori vengono segnalati per l'uso di mod di animazione 1.7
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # BehaviorB (coerenza dei tempi di attacco) deve controllare solo gli attacchi contro i giocatori?
+        # Se attivato, i colpi ai mob non verranno analizzati
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # Limite per rilevare un attacco oltre la distanza massima

@@ -61,7 +61,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Whether or not to ignore the rotation in duplicate packets
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # Por cuanto deberíamos multiplicar la ventaja total cuando el jugador es legítimo
@@ -167,6 +167,24 @@ VehicleTimer:
 PacketOrderI:
     # Habilitar si los jugadores están siendo marcados por usar mods de animación de la 1.7
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # ¿Debería BehaviorB (consistencia del ritmo de ataque) solo verificar ataques contra jugadores?
+        # Cuando está activado, los golpes a mobs no serán analizados
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # Cuanto deberíamos expandir las hit-boxes? 0.0005 debería detectar un reach de 3.0005+

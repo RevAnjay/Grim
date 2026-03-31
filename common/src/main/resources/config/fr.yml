@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Whether or not to ignore the rotation in duplicate packets
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # De combien devons-nous multiplier l'avantage total lorsque le joueur est légitime ?
@@ -163,6 +163,24 @@ VehicleTimer:
 PacketOrderI:
     # Activer si les joueurs sont signalés pour l'utilisation de mods d'animation 1.7
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # BehaviorB (cohérence du rythme d'attaque) doit-il uniquement vérifier les attaques contre les joueurs ?
+        # Lorsque activé, les coups portés aux mobs ne seront pas analysés
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # De combien devrions-nous agrandir les hitboxes ? Une augmentation de 0,0005 devrait détecter une portée de 3,0005 ou plus.

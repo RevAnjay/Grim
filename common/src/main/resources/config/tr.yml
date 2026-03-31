@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Eşya çoğaltma paketlerindeki rotayı göz ardı edip etmeyeceğimiz
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # Oyuncu meşru olduğunda toplam avantajı ne kadar çarpmalıyız?
@@ -162,6 +162,24 @@ VehicleTimer:
 PacketOrderI:
     # Oyuncular 1.7 animasyon modlarını kullandıkları için işaretleniyorsa etkinleştirin
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # BehaviorB (saldırı zamanlama tutarlılığı) yalnızca oyunculara yönelik saldırıları mı kontrol etmeli?
+        # Etkinleştirildiğinde, moblara yapılan vuruşlar analiz edilmez
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # Hitbox'ları ne kadar genişletmeliyiz? 0.0005, 3.0005+ menzili tespit etmelidir

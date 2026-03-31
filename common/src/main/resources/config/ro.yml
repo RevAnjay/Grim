@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Dacă să se ignore rotația în pachetele duplicate
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # Cu cât ar trebui să înmulțim avantajul total atunci când jucătorul este legitim
@@ -162,6 +162,24 @@ VehicleTimer:
 PacketOrderI:
     # activează dacă jucătorii sunt marcați folosind moduri de animații 1.7
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # Ar trebui ca BehaviorB (consistența ritmului de atac) să verifice doar atacurile împotriva jucătorilor?
+        # Când este activat, loviturile asupra moburilor nu vor fi analizate
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # Cu cât să mărim hitboxurile? 0.0005 ar trebui să detecteze reach 3.0005+

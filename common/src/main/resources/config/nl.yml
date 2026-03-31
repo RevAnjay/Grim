@@ -60,7 +60,7 @@ disable-default-resync-handler: false
 cancel-duplicate-packet: true
 
 # Whether or not to ignore the rotation in duplicate packets
-ignore-duplicate-packet-rotation: false
+ignore-duplicate-packet-rotation: true
 
 Simulation:
     # Met hoeveel moeten we het totale voordeel vermenigvuldigen als de speler legitiem is?
@@ -162,6 +162,24 @@ VehicleTimer:
 PacketOrderI:
     # Inschakelen als spelers worden gemarkeerd vanwege het gebruik van 1.7-animatiemods
     exempt-placing-while-digging: false
+
+Behavior:
+    b:
+        # Moet BehaviorB (consistentie van aanvalstiming) alleen aanvallen tegen spelers controleren?
+        # Indien ingeschakeld, worden aanvallen op mobs niet geanalyseerd
+        players-only: true
+
+    d:
+        angle-threshold: 45.0
+        players-only: true
+        debug: false
+    e:
+        players-only: true
+        debug: false
+        buffer-threshold: 15
+
+Hitboxes:
+    extra-expansion: 0.0
 
 Reach:
     # Met hoeveel moeten we hitboxes uitbreiden? 0.0005 moet 3.0005+ bereik detecteren
