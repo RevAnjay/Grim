@@ -210,7 +210,7 @@ public class CompensatedEntities {
         } else if (EntityTypes.ARMOR_STAND.equals(entityType)) {
             packetEntity = new PacketEntityArmorStand(player, uuid, entityType, position.getX(), position.getY(), position.getZ(), data);
         } else if (EntityTypes.PAINTING.equals(entityType)) {
-            packetEntity = new PacketEntityPainting(player, uuid, position.x, position.y, position.z, Direction.values()[data]);
+            packetEntity = new PacketEntityPainting(player, uuid, position.x, position.y, position.z, Direction.getByHorizontalIndex(data));
         } else if (EntityTypes.GUARDIAN.equals(entityType)) {
             packetEntity = new PacketEntityGuardian(player, uuid, entityType, position.x, position.y, position.z, false); // can still be an Elder Guardian in 1.8-1.10.2 from entity metadata updates
         } else if (EntityTypes.ELDER_GUARDIAN.equals(entityType)) {
