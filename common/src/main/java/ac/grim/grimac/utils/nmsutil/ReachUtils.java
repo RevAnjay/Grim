@@ -13,6 +13,10 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 @UtilityClass
 public class ReachUtils {
     // Copied from 1.8... I couldn't figure out 1.14+. "Enterprise" java code is unreadable!
@@ -179,5 +183,45 @@ public class ReachUtils {
         }
 
         return lowest;
+    }
+
+    public static @NotNull List<Vector3dm> getPossibleLookDirs(@NotNull GrimPlayer player) {
+        List<Vector3dm> dirs = new ArrayList<>(Collections.singletonList(getLook(player, player.yaw, player.pitch)));
+        dirs.add(getLook(player, player.lastYaw, player.pitch));
+        if (player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9)) {
+            dirs.add(getLook(player, player.lastYaw, player.lastPitch));
+        }
+        if (player.getClientVersion().isOlderThan(ClientVersion.V_1_8)) {
+            return Collections.singletonList(getLook(player, player.yaw, player.pitch));
+        }
+        return dirs;
+    }
+
+    public static double getMinAngleToBox(@NotNull GrimPlayer player, @NotNull SimpleCollisionBox box) {
+        List<Vector3dm> lookDirs = getPossibleLookDirs(player);
+        double[] eyeHeights = player.getPossibleEyeHeights();
+
+        double[][] points = {
+            {(box.minX + box.maxX) / 2, (box.minY + box.maxY) / 2, (box.minZ + box.maxZ) / 2},
+            {box.minX, box.minY, box.minZ}, {box.maxX, box.minY, box.minZ},
+            {box.minX, box.maxY, box.minZ}, {box.maxX, box.maxY, box.minZ},
+            {box.minX, box.minY, box.maxZ}, {box.maxX, box.minY, box.maxZ},
+            {box.minX, box.maxY, box.maxZ}, {box.maxX, box.maxY, box.maxZ}
+        };
+
+        double minAngle = Double.MAX_VALUE;
+        for (Vector3dm lookVec : lookDirs) {
+            for (double eye : eyeHeights) {
+                double ex = player.x, ey = player.y + eye, ez = player.z;
+                for (double[] p : points) {
+                    double dx = p[0] - ex, dy = p[1] - ey, dz = p[2] - ez;
+                    double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    if (len < 0.001) return 0;
+                    double dot = lookVec.getX() * (dx / len) + lookVec.getY() * (dy / len) + lookVec.getZ() * (dz / len);
+                    minAngle = Math.min(minAngle, Math.toDegrees(Math.acos(Math.min(1.0, Math.max(-1.0, dot)))));
+                }
+            }
+        }
+        return minAngle;
     }
 }

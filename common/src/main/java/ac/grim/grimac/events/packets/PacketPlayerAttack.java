@@ -48,6 +48,7 @@ public class PacketPlayerAttack extends PacketListenerAbstract {
             }
 
             if (interact.getAction() == WrapperPlayClientInteractEntity.InteractAction.ATTACK) {
+                player.lastAttackTime = System.currentTimeMillis();
                 if (player.isResetItemUsageOnAttack()) {
                     GrimAPI.INSTANCE.getItemResetHandler().resetItemUsage(player.platformPlayer);
                 }

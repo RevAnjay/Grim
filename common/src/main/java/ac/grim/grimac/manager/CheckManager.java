@@ -152,6 +152,10 @@ public class CheckManager {
                 .put(CrashF.class, new CrashF(player))
                 .put(CrashH.class, new CrashH(player))
                 .put(CrashI.class, new CrashI(player))
+                .put(BehaviorB.class, new BehaviorB(player))
+                .put(BehaviorC.class, new BehaviorC(player))
+                .put(BehaviorD.class, new BehaviorD(player))
+                .put(BehaviorE.class, new BehaviorE(player))
                 .put(SetbackBlocker.class, new SetbackBlocker(player)) // Must be last class otherwise we can't check while blocking packets
                 .build();
 
@@ -163,6 +167,7 @@ public class CheckManager {
                 .put(AimProcessor.class, new AimProcessor(player))
                 .put(AimModulo360.class, new AimModulo360(player))
                 .put(AimDuplicateLook.class, new AimDuplicateLook(player))
+                .put(BehaviorA.class, new BehaviorA(player))
                 .build();
         vehicleChecks = new ImmutableClassToInstanceMap.Builder<VehicleCheck>()
                 .put(VehiclePredictionRunner.class, new VehiclePredictionRunner(player))
@@ -226,7 +231,7 @@ public class CheckManager {
                 .put(FarPlace.class, new FarPlace(player))
                 .put(FabricatedPlace.class, new FabricatedPlace(player))
                 .put(PositionPlace.class, new PositionPlace(player))
-                .put(RotationPlace.class, new RotationPlace(player))
+                // .put(RotationPlace.class, new RotationPlace(player)) // Disabled: false positives on camera rotation
                 .put(PacketOrderN.class, new PacketOrderN(player))
                 .put(DuplicateRotPlace.class, new DuplicateRotPlace(player))
                 .put(GhostBlockMitigation.class, new GhostBlockMitigation(player))
@@ -244,7 +249,7 @@ public class CheckManager {
         blockBreakChecks = new ImmutableClassToInstanceMap.Builder<BlockBreakCheck>()
                 .put(AirLiquidBreak.class, new AirLiquidBreak(player))
                 .put(WrongBreak.class, new WrongBreak(player))
-                .put(RotationBreak.class, new RotationBreak(player))
+                // .put(RotationBreak.class, new RotationBreak(player)) // Disabled: false positives on camera rotation
                 .put(FastBreak.class, new FastBreak(player))
                 .put(MultiBreak.class, new MultiBreak(player))
                 .put(NoSwingBreak.class, new NoSwingBreak(player))

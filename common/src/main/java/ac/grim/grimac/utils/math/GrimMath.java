@@ -233,4 +233,20 @@ public class GrimMath {
     public static double square(double num) {
         return num * num;
     }
+
+    public static double mean(List<Long> values) {
+        double sum = 0;
+        for (long v : values) sum += v;
+        return sum / values.size();
+    }
+
+    public static double stdDev(List<Long> values) {
+        double m = mean(values);
+        double variance = 0;
+        for (long v : values) {
+            double diff = v - m;
+            variance += diff * diff;
+        }
+        return Math.sqrt(variance / values.size());
+    }
 }

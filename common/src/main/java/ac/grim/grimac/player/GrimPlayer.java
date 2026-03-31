@@ -238,6 +238,7 @@ public class GrimPlayer implements GrimUser {
     public Vector3d bedPosition;
     public long lastBlockPlaceUseItem = 0;
     public long lastBlockBreak = 0;
+    public long lastAttackTime = 0;
     public final AtomicInteger cancelledPackets = new AtomicInteger(0);
     public MainSupportingBlockData mainSupportingBlockData = new MainSupportingBlockData(null, false);
     public final Object2DoubleMap<FluidTag> fluidHeight = new Object2DoubleArrayMap<>(2);
@@ -255,7 +256,7 @@ public class GrimPlayer implements GrimUser {
     private boolean debugPacketCancel = false;
     private int spamThreshold = 100;
     private int maxTransactionTime = 60;
-    @Getter private boolean ignoreDuplicatePacketRotation = false;
+    @Getter private boolean ignoreDuplicatePacketRotation = true;
     @Getter @Setter private boolean experimentalChecks = false;
     @Getter private boolean cancelDuplicatePacket = true;
     @Getter @Setter private boolean exemptElytra = false;
@@ -915,7 +916,7 @@ public class GrimPlayer implements GrimUser {
         debugPacketCancel = config.getBooleanElse("debug-packet-cancel", false);
         spamThreshold = config.getIntElse("packet-spam-threshold", 100);
         maxTransactionTime = GrimMath.clamp(config.getIntElse("max-transaction-time", 60), 1, 180);
-        ignoreDuplicatePacketRotation = config.getBooleanElse("ignore-duplicate-packet-rotation", false);
+        ignoreDuplicatePacketRotation = config.getBooleanElse("ignore-duplicate-packet-rotation", true);
         cancelDuplicatePacket = config.getBooleanElse("cancel-duplicate-packet", true);
 
         boolean shouldDisableResync = config.getBooleanElse("disable-default-resync-handler", false);
