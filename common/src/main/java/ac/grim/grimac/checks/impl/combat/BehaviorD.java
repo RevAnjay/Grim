@@ -6,6 +6,7 @@ import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PacketCheck;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.player.GrimPlayer;
+import ac.grim.grimac.utils.collisions.datatypes.SimpleCollisionBox;
 import ac.grim.grimac.utils.data.packetentity.PacketEntity;
 import ac.grim.grimac.utils.nmsutil.ReachUtils;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
@@ -68,7 +69,12 @@ public class BehaviorD extends Check implements PacketCheck {
             PacketEntity entity = player.compensatedEntities.entityMap.get(entityId);
             if (entity == null) continue;
 
-            double minAngle = ReachUtils.getMinAngleToBox(player, entity.getPossibleCollisionBoxes());
+            SimpleCollisionBox box = entity.getPossibleCollisionBoxes();
+
+            // Skip if player is inside or very close to the hitbox
+            if (ReachUtils.getMinReachToBox(player, box) < 0.5) continue;
+
+            double minAngle = ReachUtils.getMinAngleToBox(player, box);
 
             if (debug) {
                 LogUtil.info("[BehaviorD DEBUG] " + player.getName() + " " + String.format("angle=%.1f threshold=%.1f", minAngle, angleThreshold));

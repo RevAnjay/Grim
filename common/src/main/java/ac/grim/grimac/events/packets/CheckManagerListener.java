@@ -726,6 +726,10 @@ public class CheckManagerListener extends PacketListenerAbstract {
             float deltaXRot = player.yaw - player.lastYaw;
             float deltaYRot = player.pitch - player.lastPitch;
 
+            if (deltaXRot != 0 || deltaYRot != 0) {
+                player.hasRotatedSinceSpawn = true;
+            }
+
             final RotationUpdate update = new RotationUpdate(new HeadRotation(player.lastYaw, player.lastPitch), new HeadRotation(player.yaw, player.pitch), deltaXRot, deltaYRot);
             player.checkManager.onRotationUpdate(update);
         }

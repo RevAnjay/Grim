@@ -16,7 +16,8 @@ public class BehaviorA extends Check implements RotationCheck {
 
     @Override
     public void process(final RotationUpdate rotationUpdate) {
-        if (player.packetStateData.lastPacketWasTeleport
+        if (!player.hasRotatedSinceSpawn
+                || player.packetStateData.lastPacketWasTeleport
                 || player.gamemode == GameMode.SPECTATOR
                 || player.inVehicle()
                 || System.currentTimeMillis() - player.joinTime < 5000

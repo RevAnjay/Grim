@@ -102,7 +102,10 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
             }
 
             if (health.getHealth() <= 0) {
-                player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> player.compensatedEntities.self.isDead = true);
+                player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
+                    player.compensatedEntities.self.isDead = true;
+                    player.hasRotatedSinceSpawn = false;
+                });
             } else {
                 player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get() + 1, () -> player.compensatedEntities.self.isDead = false);
             }
