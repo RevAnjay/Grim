@@ -13,6 +13,7 @@ import ac.grim.grimac.checks.impl.chat.ChatC;
 import ac.grim.grimac.checks.impl.chat.ChatD;
 import ac.grim.grimac.checks.impl.combat.*;
 import ac.grim.grimac.checks.impl.crash.*;
+import ac.grim.grimac.checks.impl.inventory.*;
 import ac.grim.grimac.checks.impl.elytra.*;
 import ac.grim.grimac.checks.impl.exploit.ExploitA;
 import ac.grim.grimac.checks.impl.exploit.ExploitB;
@@ -152,6 +153,12 @@ public class CheckManager {
                 .put(CrashF.class, new CrashF(player))
                 .put(CrashH.class, new CrashH(player))
                 .put(CrashI.class, new CrashI(player))
+                .put(ElytraJ.class, new ElytraJ(player))
+                .put(InventoryA.class, new InventoryA(player))
+                .put(InventoryB.class, new InventoryB(player))
+                .put(InventoryE.class, new InventoryE(player))
+                .put(InventoryF.class, new InventoryF(player))
+                .put(InventoryG.class, new InventoryG(player))
                 .put(BehaviorB.class, new BehaviorB(player))
                 .put(BehaviorC.class, new BehaviorC(player))
                 .put(BehaviorD.class, new BehaviorD(player))
@@ -235,6 +242,8 @@ public class CheckManager {
                 .put(PacketOrderN.class, new PacketOrderN(player))
                 .put(DuplicateRotPlace.class, new DuplicateRotPlace(player))
                 .put(GhostBlockMitigation.class, new GhostBlockMitigation(player))
+                .put(InventoryC.class, new InventoryC(player))
+                .put(InventoryD.class, new InventoryD(player))
                 .build();
 
         prePredictionChecks = new ImmutableClassToInstanceMap.Builder<PacketCheck>()
@@ -269,6 +278,8 @@ public class CheckManager {
                 .put(TransactionOrder.class, new TransactionOrder(player))
                 .put(VehicleC.class, new VehicleC(player))
                 .put(Hitboxes.class, new Hitboxes(player)) // Hitboxes is invoked by Reach
+                .put(WallHit.class, new WallHit(player)) // WallHit is invoked by Reach
+                .put(EntityPierce.class, new EntityPierce(player)) // EntityPierce is invoked by Reach
                 .build();
 
         allChecks = new ImmutableClassToInstanceMap.Builder<AbstractCheck>()

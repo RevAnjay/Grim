@@ -16,6 +16,7 @@
 package ac.grim.grimac.utils.data.packetentity;
 
 import ac.grim.grimac.player.GrimPlayer;
+import ac.grim.grimac.utils.collisions.datatypes.CollisionBox;
 import ac.grim.grimac.utils.collisions.datatypes.SimpleCollisionBox;
 import ac.grim.grimac.utils.data.ReachInterpolationData;
 import ac.grim.grimac.utils.data.TrackedPosition;
@@ -237,6 +238,12 @@ public class PacketEntity extends TypedPacketEntity {
         }
 
         return ReachInterpolationData.combineCollisionBox(oldPacketLocation.getPossibleHitboxCombined(), newPacketLocation.getPossibleHitboxCombined());
+    }
+
+    // Returns the minimum possible collision box (conservative estimate for non-target entities)
+    // Used by WorldRayTrace to shrink non-target entity hitboxes for WallHit/EntityPierce checks
+    public CollisionBox getMinimumPossibleCollisionBoxes() {
+        return getPossibleCollisionBoxes();
     }
 
     public OptionalInt getPotionEffectLevel(PotionType effect) {

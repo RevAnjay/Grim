@@ -1,5 +1,6 @@
 package ac.grim.grimac.predictionengine;
 
+import ac.grim.grimac.checks.impl.combat.Reach;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.predictionengine.predictions.PredictionEngine;
 import ac.grim.grimac.utils.collisions.CollisionData;
@@ -90,6 +91,7 @@ public class PointThreeEstimator {
     private final GrimPlayer player;
     // If the player was within 0.03 of water between now and the last movement
     public boolean isNearFluid = false;
+    public boolean isNearNetherPortal = false;
     // The one thing we don't need to store is if the player 0.03'd to the ground, as this sends a packet
     // seriously, why mojang.  You send the player touched the ground but not their pos.
     // Is the position not important to you?  Why do you throw this data out??? God-damn it Mojang!
@@ -156,6 +158,8 @@ public class PointThreeEstimator {
 
             isNearFluid = true;
         }
+
+        player.checkManager.getPacketCheck(Reach.class).handleBlockChange(new Vector3i(x, y, z), state);
 
         if (pointThreeBox.isIntersected(new SimpleCollisionBox(x, y, z))) {
             // https://github.com/MWHunter/Grim/issues/613

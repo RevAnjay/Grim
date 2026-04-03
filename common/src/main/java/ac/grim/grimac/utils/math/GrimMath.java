@@ -234,6 +234,11 @@ public class GrimMath {
         return num * num;
     }
 
+    public static double distanceSquared(double x1, double y1, double z1, double x2, double y2, double z2) {
+        double dx = x1 - x2, dy = y1 - y2, dz = z1 - z2;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     public static double mean(List<Long> values) {
         double sum = 0;
         for (long v : values) sum += v;
