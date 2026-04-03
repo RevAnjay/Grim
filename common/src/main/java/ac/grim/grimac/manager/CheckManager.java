@@ -162,6 +162,7 @@ public class CheckManager {
                 .put(BehaviorB.class, new BehaviorB(player))
                 .put(BehaviorC.class, new BehaviorC(player))
                 .put(BehaviorD.class, new BehaviorD(player))
+                .put(BehaviorF.class, new BehaviorF(player))
                 .put(BehaviorE.class, new BehaviorE(player))
                 .put(SetbackBlocker.class, new SetbackBlocker(player)) // Must be last class otherwise we can't check while blocking packets
                 .build();

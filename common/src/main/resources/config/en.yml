@@ -194,6 +194,10 @@ Behavior:
         # Debug mode: logs every attack with angle value
         debug: false
 
+    f:
+        # Detects automated sprint reset (W-tap/S-tap macros)
+        players-only: true
+        debug: false
     e:
         # Detects triggerbots that attack at perfect fall distance for critical hits
         # Based on concept by DarknessAC (KillAura P)
