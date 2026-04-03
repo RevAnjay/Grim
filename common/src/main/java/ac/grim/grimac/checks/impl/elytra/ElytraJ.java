@@ -45,8 +45,8 @@ public class ElytraJ extends Check implements PacketCheck {
                 double deltaZ = player.z - player.lastZ;
                 double deltaXZ = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
 
-                double accelY = deltaY - lastDeltaY;
-                double accelXZ = deltaXZ - lastDeltaXZ;
+                double accelY = Math.abs(deltaY - lastDeltaY);
+                double accelXZ = Math.abs(deltaXZ - lastDeltaXZ);
 
                 if (accelY <= 0.0 && accelXZ <= 0.0) {
                     if (buffer++ > 5) {
