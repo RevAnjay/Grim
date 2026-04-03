@@ -1,0 +1,68 @@
+package ac.grim.grimac.checks.impl.elytra;
+
+import ac.grim.grimac.GrimAPI;
+import ac.grim.grimac.checks.Check;
+import ac.grim.grimac.checks.CheckData;
+import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.player.GrimPlayer;
+import com.github.retrooper.packetevents.event.PacketReceiveEvent;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientEntityAction;
+
+// Original check by DarknessAC
+// https://github.com/1hendex/DarknessAC
+@CheckData(name = "ElytraJ", description = "Checks for invalid elytra accelerations", experimental = true)
+public class ElytraJ extends Check implements PacketCheck {
+
+    private double buffer = 0;
+    private double lastDeltaY = 0;
+    private double lastDeltaXZ = 0;
+
+    public ElytraJ(GrimPlayer player) {
+        super(player);
+    }
+
+    @Override
+    public void onPacketReceive(final PacketReceiveEvent event) {
+        if (player.wasTouchingWater
+                || player.wasSwimming
+                || player.packetStateData.lastPacketWasOnePointSeventeenDuplicate
+                || player.packetStateData.lastPacketWasTeleport) {
+            return;
+        }
+
+        if (player.getTransactionPing() > 500 || GrimAPI.INSTANCE.getPlatformServer().getTPS() < 18.5) {
+            return;
+        }
+
+        if (event.getPacketType() == PacketType.Play.Client.ENTITY_ACTION) {
+            WrapperPlayClientEntityAction action = new WrapperPlayClientEntityAction(event);
+            if (action.getAction() == WrapperPlayClientEntityAction.Action.START_FLYING_WITH_ELYTRA) {
+                double deltaX = player.x - player.lastX;
+                double deltaY = player.y - player.lastY;
+                double deltaZ = player.z - player.lastZ;
+                double deltaXZ = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+
+                double accelY = deltaY - lastDeltaY;
+                double accelXZ = deltaXZ - lastDeltaXZ;
+
+                if (accelY <= 0.0 && accelXZ <= 0.0) {
+                    if (buffer++ > 5) {
+                        flagAndAlert("accel=" + String.format("%.4f", accelXZ) + " | " + String.format("%.4f", accelY));
+                    }
+                } else {
+                    buffer = Math.max(0, buffer - 0.075);
+                    reward();
+                }
+            }
+        }
+
+        // Track deltas every flying packet for acceleration calculation
+        if (com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying.isFlying(event.getPacketType())) {
+            double deltaX = player.x - player.lastX;
+            double deltaZ = player.z - player.lastZ;
+            lastDeltaY = player.y - player.lastY;
+            lastDeltaXZ = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+        }
+    }
+}
