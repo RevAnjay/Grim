@@ -38,6 +38,7 @@ import ac.grim.grimac.utils.math.GrimMath;
 import ac.grim.grimac.utils.math.Location;
 import ac.grim.grimac.utils.math.TrigHandler;
 import ac.grim.grimac.utils.math.Vector3dm;
+import ac.grim.grimac.utils.nmsutil.ReachUtils;
 import ac.grim.grimac.utils.nmsutil.BlockProperties;
 import ac.grim.grimac.utils.nmsutil.Collisions;
 import ac.grim.grimac.utils.nmsutil.GetBoundingBox;
@@ -658,6 +659,20 @@ public class GrimPlayer implements GrimUser {
 
     public EntityType getVehicleType() {
         return inVehicle() ? getVehicle().type : null;
+    }
+
+    public Vector3dm[] getPossibleLookVectors(boolean isPrediction) {
+        List<Vector3dm> possibleLookDirs = new ArrayList<>(Collections.singletonList(ReachUtils.getLook(this, this.yaw, this.pitch)));
+        if (!isPrediction) {
+            possibleLookDirs.add(ReachUtils.getLook(this, this.lastYaw, this.pitch));
+            if (this.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9)) {
+                possibleLookDirs.add(ReachUtils.getLook(this, this.lastYaw, this.lastPitch));
+            }
+            if (this.getClientVersion().isOlderThan(ClientVersion.V_1_8)) {
+                possibleLookDirs = Collections.singletonList(ReachUtils.getLook(this, this.yaw, this.pitch));
+            }
+        }
+        return possibleLookDirs.toArray(new Vector3dm[0]);
     }
 
     public double[] getPossibleEyeHeights() { // We don't return sleeping eye height
