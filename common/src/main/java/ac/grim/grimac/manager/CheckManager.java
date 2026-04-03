@@ -205,10 +205,10 @@ public class CheckManager {
                 .put(NoSlow.class, new NoSlow(player))
                 .put(SprintB.class, new SprintB(player))
                 .put(SprintC.class, new SprintC(player))
-                .put(SprintD.class, new SprintD(player))
+                // .put(SprintD.class, new SprintD(player)) // Disabled: useless check, false positives
                 .put(SprintE.class, new SprintE(player))
                 .put(SprintF.class, new SprintF(player))
-                .put(SprintG.class, new SprintG(player))
+                // .put(SprintG.class, new SprintG(player)) // Disabled: bad implementation, false positives
                 .put(MultiInteractA.class, new MultiInteractA(player))
                 .put(MultiInteractB.class, new MultiInteractB(player))
                 .put(ElytraA.class, new ElytraA(player))

@@ -79,6 +79,7 @@ public class Reach extends Check implements PacketCheck {
     public double threshold;
     private double hitboxExtraExpansion;
     private double reachExtraExpansion;
+    private Set<String> wallHitIgnoredBlocks = new HashSet<>();
     private final java.util.HashMap<Integer, Double> cancelBuffers = new java.util.HashMap<>();
 
     public Reach(GrimPlayer player) {
@@ -323,7 +324,9 @@ public class Reach extends Check implements PacketCheck {
                 minDistance = Double.MIN_VALUE;
                 foundHitData = hitData;
             // Hit a block that wasn't changed this tick (WallHit)
-            } else if (enableWallHit && hitData instanceof BlockHitData && !blocksChangedThisTick.contains(((BlockHitData) hitData).position())) {
+            } else if (enableWallHit && hitData instanceof BlockHitData
+                    && !blocksChangedThisTick.contains(((BlockHitData) hitData).position())
+                    && !wallHitIgnoredBlocks.contains(((BlockHitData) hitData).state().getType().getName().toUpperCase())) {
                 minDistance = Double.MIN_VALUE;
                 foundHitData = hitData;
             }
@@ -404,6 +407,7 @@ public class Reach extends Check implements PacketCheck {
         this.cancelImpossibleHits = config.getBooleanElse("Reach.block-impossible-hits", true);
         this.enableWallHit = config.getBooleanElse("WallHit.enabled", true);
         this.enableEntityPierce = config.getBooleanElse("EntityPierce.enabled", true);
+        this.wallHitIgnoredBlocks = new HashSet<>(config.getStringListElse("WallHit.ignored-blocks", new ArrayList<>()));
         this.threshold = config.getDoubleElse("Reach.threshold", 0.0005);
         this.reachExtraExpansion = config.getDoubleElse("Reach.extra-expansion", 0.0);
         this.hitboxExtraExpansion = config.getDoubleElse("Hitboxes.extra-expansion", 0.0);

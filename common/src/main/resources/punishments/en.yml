@@ -271,12 +271,24 @@ Punishments:
       - "10:5 [alert]"
       - "10:5 [log]"
       - "20:10 [webhook]"
+  SprintKick:
+    remove-violations-after: 300
+    checks:
+      - "SprintA"
+      - "SprintC"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "10:0 [webhook]"
+      - "25:0 kick %player% [GroundedGrim] Sprint violation (%check_name%)"
   Misc:
     remove-violations-after: 300
     checks:
       - "Vehicle"
       - "NoSlow"
       - "Sprint"
+      - "!SprintA"
+      - "!SprintC"
       - "MultiActions"
       - "Place"
       - "!InvalidPlaceA"
