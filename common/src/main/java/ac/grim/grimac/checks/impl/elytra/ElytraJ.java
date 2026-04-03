@@ -7,6 +7,7 @@ import ac.grim.grimac.checks.type.PacketCheck;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientEntityAction;
 
 // Original check by DarknessAC
@@ -26,6 +27,7 @@ public class ElytraJ extends Check implements PacketCheck {
     public void onPacketReceive(final PacketReceiveEvent event) {
         if (player.wasTouchingWater
                 || player.wasSwimming
+                || isInWeb()
                 || player.packetStateData.lastPacketWasOnePointSeventeenDuplicate
                 || player.packetStateData.lastPacketWasTeleport) {
             return;
@@ -64,5 +66,12 @@ public class ElytraJ extends Check implements PacketCheck {
             lastDeltaY = player.y - player.lastY;
             lastDeltaXZ = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
         }
+    }
+
+    private boolean isInWeb() {
+        int blockX = (int) Math.floor(player.x);
+        int blockY = (int) Math.floor(player.y);
+        int blockZ = (int) Math.floor(player.z);
+        return player.compensatedWorld.getBlock(blockX, blockY, blockZ).getType() == StateTypes.COBWEB;
     }
 }
