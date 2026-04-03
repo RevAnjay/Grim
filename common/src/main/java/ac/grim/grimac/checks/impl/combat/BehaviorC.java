@@ -22,6 +22,8 @@ public class BehaviorC extends Check implements PacketCheck {
     private boolean playersOnly = true;
     private boolean debug = false;
     private long spreadThreshold = 60;
+    private boolean mitigateHits = true;
+    private int mitigationVL = 3;
 
     public BehaviorC(GrimPlayer player) {
         super(player);
@@ -32,6 +34,8 @@ public class BehaviorC extends Check implements PacketCheck {
         playersOnly = config.getBooleanElse("Behavior.c.players-only", true);
         debug = config.getBooleanElse("Behavior.c.debug", false);
         spreadThreshold = config.getIntElse("Behavior.c.spread-threshold", 120);
+        mitigateHits = config.getBooleanElse("Behavior.c.mitigate-hits", true);
+        mitigationVL = config.getIntElse("Behavior.c.mitigation-vl", 3);
     }
 
     @Override
@@ -48,6 +52,11 @@ public class BehaviorC extends Check implements PacketCheck {
         if (playersOnly) {
             PacketEntity entity = player.compensatedEntities.entityMap.get(interact.getEntityId());
             if (entity == null || entity.type != EntityTypes.PLAYER) return;
+        }
+
+        if (mitigateHits && violations >= mitigationVL && shouldModifyPackets()) {
+            event.setCancelled(true);
+            player.onPacketCancel();
         }
 
         long now = System.currentTimeMillis();

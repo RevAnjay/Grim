@@ -7,6 +7,8 @@ import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.update.RotationUpdate;
 import com.github.retrooper.packetevents.protocol.player.GameMode;
 
+// Original check by DarknessAC
+// https://github.com/1hendex/DarknessAC
 @CheckData(name = "BehaviorA", configName = "Behavior", description = "Checks for zero pitch rotations")
 public class BehaviorA extends Check implements RotationCheck {
 

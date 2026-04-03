@@ -170,6 +170,9 @@ Behavior:
         players-only: true
         # Debug mode: alerts every hit with stdDev, mean, interval values
         debug: false
+        # Cancel hits when VL reaches this threshold (mitigation)
+        mitigate-hits: true
+        mitigation-vl: 3
     c:
         # Should BehaviorC (min-max spread) only check attacks against players?
         players-only: true
@@ -177,6 +180,9 @@ Behavior:
         debug: false
         # Maximum allowed spread (max - min interval) in ms before flagging
         spread-threshold: 60
+        # Cancel hits when VL reaches this threshold (mitigation)
+        mitigate-hits: true
+        mitigation-vl: 3
     d:
         # Minimum angle (degrees) between look direction and entity to flag as no-rotation attack
         # 90 = flag only when clearly not looking at target
@@ -196,6 +202,18 @@ Behavior:
         # How many consecutive identical fractional Y positions before flagging
         # Higher = fewer false positives, lower = faster detection
         buffer-threshold: 15
+
+WallHit:
+    # Enable detection of hitting through blocks (doors, trapdoors, etc.)
+    enabled: true
+    # Setback VL for hitting through blocks
+    setbackvl: 20
+
+EntityPierce:
+    # Enable detection of hitting through other entities
+    enabled: true
+    # Setback VL for hitting through other entities
+    setbackvl: 30
 
 Hitboxes:
     # Extra hitbox expansion (blocks) applied on top of Reach's expansion

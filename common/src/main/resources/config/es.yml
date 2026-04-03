@@ -183,6 +183,18 @@ Behavior:
         debug: false
         buffer-threshold: 15
 
+WallHit:
+    # Enable detection of hitting through blocks (doors, trapdoors, etc.)
+    enabled: true
+    # Setback VL for hitting through blocks
+    setbackvl: 20
+
+EntityPierce:
+    # Enable detection of hitting through other entities
+    enabled: true
+    # Setback VL for hitting through other entities
+    setbackvl: 30
+
 Hitboxes:
     extra-expansion: 0.0
 

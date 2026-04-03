@@ -2,13 +2,13 @@ package ac.grim.grimac.checks.impl.combat;
 
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.utils.anticheat.LogUtil;
-import ac.grim.grimac.utils.math.GrimMath;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PacketCheck;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.data.packetentity.PacketEntity;
 import ac.grim.grimac.utils.lists.EvictingQueue;
+import ac.grim.grimac.utils.math.GrimMath;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
@@ -22,6 +22,8 @@ public class BehaviorB extends Check implements PacketCheck {
     private long lastAttackTime = -1;
     private boolean playersOnly = true;
     private boolean debug = false;
+    private boolean mitigateHits = true;
+    private int mitigationVL = 3;
 
     public BehaviorB(GrimPlayer player) {
         super(player);
@@ -31,6 +33,8 @@ public class BehaviorB extends Check implements PacketCheck {
     public void onReload(ConfigManager config) {
         playersOnly = config.getBooleanElse("Behavior.b.players-only", true);
         debug = config.getBooleanElse("Behavior.b.debug", false);
+        mitigateHits = config.getBooleanElse("Behavior.b.mitigate-hits", true);
+        mitigationVL = config.getIntElse("Behavior.b.mitigation-vl", 3);
     }
 
     @Override
@@ -49,6 +53,12 @@ public class BehaviorB extends Check implements PacketCheck {
             if (entity == null || entity.type != EntityTypes.PLAYER) return;
         }
 
+        // Cancel hits when VL is at or above mitigation threshold
+        if (mitigateHits && violations >= mitigationVL && shouldModifyPackets()) {
+            event.setCancelled(true);
+            player.onPacketCancel();
+        }
+
         long now = System.currentTimeMillis();
 
         if (lastAttackTime != -1) {
@@ -56,7 +66,7 @@ public class BehaviorB extends Check implements PacketCheck {
 
             if (interval < 50) {
                 if (debug) {
-                    LogUtil.info("[BehaviorB DEBUG] " + player.getName() + " " + "skip burst interval=" + interval + "ms");
+                    LogUtil.info("[BehaviorB DEBUG] " + player.getName() + " skip burst interval=" + interval + "ms");
                 }
                 return;
             }
@@ -69,7 +79,7 @@ public class BehaviorB extends Check implements PacketCheck {
                     double mean = GrimMath.mean(intervals);
 
                     if (debug) {
-                        LogUtil.info("[BehaviorB DEBUG] " + player.getName() + " " + "stdDev=" + String.format("%.2f", stdDev)
+                        LogUtil.info("[BehaviorB DEBUG] " + player.getName() + " stdDev=" + String.format("%.2f", stdDev)
                                 + " mean=" + String.format("%.1f", mean)
                                 + "ms samples=" + intervals.size()
                                 + " interval=" + interval + "ms");
@@ -77,17 +87,16 @@ public class BehaviorB extends Check implements PacketCheck {
                         flagAndAlert("stdDev=" + String.format("%.2f", stdDev));
                     }
                 } else if (debug) {
-                    LogUtil.info("[BehaviorB DEBUG] " + player.getName() + " " + "collecting samples=" + intervals.size() + "/10 interval=" + interval + "ms");
+                    LogUtil.info("[BehaviorB DEBUG] " + player.getName() + " collecting samples=" + intervals.size() + "/10 interval=" + interval + "ms");
                 }
             } else {
                 intervals.clear();
                 if (debug) {
-                    LogUtil.info("[BehaviorB DEBUG] " + player.getName() + " " + "reset (pause > 3s)");
+                    LogUtil.info("[BehaviorB DEBUG] " + player.getName() + " reset (pause > 3s)");
                 }
             }
         }
 
         lastAttackTime = now;
     }
-
 }

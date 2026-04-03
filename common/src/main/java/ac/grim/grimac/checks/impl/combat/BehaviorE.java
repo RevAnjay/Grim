@@ -13,10 +13,8 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.GameMode;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
 
-// Based on concept by Данила Гнедин (DarknessAC KillAura P)
-// Detects triggerbots that attack at perfect fall distance timing for critical hits
-// A triggerbot waits for the optimal crit point in the jump arc, producing
-// identical player.y % 1 (fractional Y position) on every attack
+// Based on ideas from DarknessAC
+// https://github.com/1hendex/DarknessAC
 @CheckData(name = "BehaviorE", configName = "Behavior", description = "Checks for perfect fall distance when attack", experimental = true)
 public class BehaviorE extends Check implements PacketCheck {
 
