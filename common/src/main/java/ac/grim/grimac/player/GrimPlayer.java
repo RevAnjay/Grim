@@ -241,6 +241,9 @@ public class GrimPlayer implements GrimUser {
     public long lastBlockBreak = 0;
     public long lastAttackTime = 0;
     public boolean hasRotatedSinceSpawn = false;
+    public boolean hasInventoryOpen;
+    public long lastInventoryOpen;
+    public ac.grim.grimac.utils.inventory.InventoryDesyncStatus inventoryDesyncStatus = ac.grim.grimac.utils.inventory.InventoryDesyncStatus.NOT_DESYNCED;
     public final AtomicInteger cancelledPackets = new AtomicInteger(0);
     public MainSupportingBlockData mainSupportingBlockData = new MainSupportingBlockData(null, false);
     public final Object2DoubleMap<FluidTag> fluidHeight = new Object2DoubleArrayMap<>(2);
