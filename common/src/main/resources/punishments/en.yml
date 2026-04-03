@@ -34,9 +34,7 @@ Punishments:
   CrashBan:
     remove-violations-after: 300
     checks:
-      - "CrashA"
-      - "CrashC"
-      - "CrashI"
+      - "Crash"
     commands:
       - "1:1 [alert]"
       - "1:1 [log]"
@@ -52,6 +50,34 @@ Punishments:
       - "1:1 [log]"
       - "3:0 [webhook]"
       - "10:0 ban %player% [GroundedGrim] Exploit (%check_name%)"
+  PlaceBan:
+    remove-violations-after: 300
+    checks:
+      - "InvalidPlaceA"
+      - "InvalidPlaceB"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "1:0 [webhook]"
+      - "1:0 ban %player% [GroundedGrim] Invalid placement (%check_name%)"
+  PacketOrderCKick:
+    remove-violations-after: 300
+    checks:
+      - "PacketOrderC"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "1:0 [webhook]"
+      - "2:0 kick %player% [GroundedGrim] Protocol violation (%check_name%)"
+  BadPacketsWKick:
+    remove-violations-after: 300
+    checks:
+      - "BadPacketsW"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "1:0 [webhook]"
+      - "2:0 kick %player% [GroundedGrim] Protocol violation (%check_name%)"
   ProtocolKick:
     remove-violations-after: 300
     checks:
@@ -63,27 +89,22 @@ Punishments:
       - "BadPacketsO"
       - "BadPacketsH"
       - "PacketOrderB"
-      - "PacketOrderC"
     commands:
       - "1:1 [alert]"
       - "1:1 [log]"
       - "10:0 [webhook]"
       - "10:0 [proxy]"
       - "20:0 kick %player% [GroundedGrim] Protocol violation (%check_name%)"
-  CrashKick:
+  PlaceKick:
     remove-violations-after: 300
     checks:
-      - "CrashB"
-      - "CrashD"
-      - "CrashF"
-      - "CrashG"
-      - "CrashH"
+      - "FarPlace"
+      - "AirLiquidPlace"
     commands:
       - "1:1 [alert]"
       - "1:1 [log]"
       - "3:0 [webhook]"
-      - "3:0 [proxy]"
-      - "10:0 kick %player% [GroundedGrim] Crash exploit (%check_name%)"
+      - "5:0 kick %player% [GroundedGrim] Placement violation (%check_name%)"
   Timer:
     remove-violations-after: 300
     checks:
@@ -100,6 +121,8 @@ Punishments:
     checks:
       - "Reach"
       - "Hitboxes"
+      - "WallHit"
+      - "EntityPierce"
     commands:
       - "1:1 [alert]"
       - "1:1 [log]"
@@ -124,6 +147,43 @@ Punishments:
       - "1:1 [log]"
       - "1:0 [webhook]"
       - "2:0 kick %player% [GroundedGrim] Combat violation (%check_name%)"
+  AutoclickerKick:
+    remove-violations-after: 300
+    checks:
+      - "BehaviorB"
+      - "BehaviorC"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "5:0 [webhook]"
+      - "30:0 kick %player% [GroundedGrim] Combat violation (%check_name%)"
+  InventoryKick:
+    remove-violations-after: 300
+    checks:
+      - "Inventory"
+      - "!InventoryD"
+      - "!InventoryE"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "3:0 [webhook]"
+      - "7:0 kick %player% [GroundedGrim] Inventory violation (%check_name%)"
+  InventoryDKick:
+    remove-violations-after: 300
+    checks:
+      - "InventoryD"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "5:0 [webhook]"
+      - "30:0 kick %player% [GroundedGrim] Inventory violation (%check_name%)"
+  InventoryE:
+    remove-violations-after: 300
+    checks:
+      - "InventoryE"
+    commands:
+      - "5:5 [alert]"
+      - "5:5 [log]"
   Simulation:
     remove-violations-after: 300
     checks:
@@ -158,7 +218,6 @@ Punishments:
     remove-violations-after: 300
     checks:
       - "BadPackets"
-      # exclude checks handled by ProtocolBan and ProtocolKick
       - "!BadPacketsD"
       - "!BadPacketsF"
       - "!BadPacketsG"
@@ -168,16 +227,50 @@ Punishments:
       - "!BadPacketsL"
       - "!BadPacketsO"
       - "!BadPacketsS"
+      - "!BadPacketsW"
       - "!BadPacketsY"
       - "PacketOrder"
       - "!PacketOrderB"
       - "!PacketOrderC"
-      - "CrashE"
     commands:
       - "20:20 [alert]"
       - "20:20 [log]"
       - "40:40 [webhook]"
       - "40:40 [proxy]"
+  ElytraKick:
+    remove-violations-after: 300
+    checks:
+      - "ElytraA"
+      - "ElytraB"
+      - "ElytraC"
+      - "ElytraD"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "3:0 [webhook]"
+      - "7:0 kick %player% [GroundedGrim] Elytra violation (%check_name%)"
+  ElytraJKick:
+    remove-violations-after: 300
+    checks:
+      - "ElytraJ"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "2:0 [webhook]"
+      - "4:0 kick %player% [GroundedGrim] Elytra violation (%check_name%)"
+  Elytra:
+    remove-violations-after: 300
+    checks:
+      - "Elytra"
+      - "!ElytraA"
+      - "!ElytraB"
+      - "!ElytraC"
+      - "!ElytraD"
+      - "!ElytraJ"
+    commands:
+      - "10:5 [alert]"
+      - "10:5 [log]"
+      - "20:10 [webhook]"
   Misc:
     remove-violations-after: 300
     checks:
@@ -186,10 +279,13 @@ Punishments:
       - "Sprint"
       - "MultiActions"
       - "Place"
+      - "!InvalidPlaceA"
+      - "!InvalidPlaceB"
+      - "!FarPlace"
+      - "!AirLiquidPlace"
       - "Baritone"
       - "Break"
       - "TransactionOrder"
-      - "Elytra"
       - "Chat"
       - "ExploitB"
     commands:
@@ -197,16 +293,6 @@ Punishments:
       - "10:5 [log]"
       - "20:10 [webhook]"
       - "20:10 [proxy]"
-  AutoclickerKick:
-    remove-violations-after: 300
-    checks:
-      - "BehaviorB"
-      - "BehaviorC"
-    commands:
-      - "1:1 [alert]"
-      - "1:1 [log]"
-      - "5:0 [webhook]"
-      - "20:0 kick %player% [GroundedGrim] Combat violation (%check_name%)"
   Combat:
     remove-violations-after: 300
     checks:
