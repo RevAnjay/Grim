@@ -1,0 +1,56 @@
+name: Auto Release
+
+on:
+  workflow_run:
+    workflows: ["Gradle Package (Development)"]
+    types: [completed]
+    branches: [2.0]
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew build -x test
+
+      - name: Get version
+        id: version
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          VERSION=$(./gradlew printVersion -q | grep '^VERSION=' | tail -n1 | cut -d'=' -f2)
+          if [ -z "$VERSION" ]; then
+            VERSION="dev-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$(date -u +%Y.%m.%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        with:
+          tag_name: "${{ steps.version.outputs.tag }}"
+          name: "GroundedGrim ${{ steps.version.outputs.version }}"
+          body: "Automatic release from commit ${{ env.HEAD_SHA }}."
+          files: |
+            bukkit/build/libs/grimac-bukkit-*.jar
+            fabric/build/libs/grimac-fabric-*.jar
