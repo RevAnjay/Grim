@@ -31,6 +31,11 @@ public class NoSlow extends Check implements PostPredictionCheck {
                 buffer = 0;
             }
 
+            if (player.stuckSpeedMultiplier.getX() < 0.99) {
+                bestOffset = 1;
+                return;
+            }
+
             if (bestOffset > offsetToFlag) {
                 buffer += bestOffset;
                 if (buffer > 0.15) {
