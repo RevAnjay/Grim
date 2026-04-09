@@ -1,29 +1,28 @@
 package ac.grim.grimac.checks.impl.combat;
 
 import ac.grim.grimac.checks.Check;
-import ac.grim.grimac.utils.anticheat.LogUtil;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PacketCheck;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.player.GrimPlayer;
+import ac.grim.grimac.utils.anticheat.LogUtil;
 import ac.grim.grimac.utils.data.packetentity.PacketEntity;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.GameMode;
+import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
 
-// Based on ideas from DarknessAC
-// https://github.com/1hendex/DarknessAC
-@CheckData(name = "BehaviorE", configName = "Behavior", description = "Checks for perfect fall distance when attack")
+@CheckData(name = "BehaviorE", configName = "Behavior", description = "Checks for consistent fallDistance on attack")
 public class BehaviorE extends Check implements PacketCheck {
 
-    private double lastJumpY = 0;
+    private double lastFallDistance = -1;
     private double buffer = 0;
     private long lastAttackTime = 0;
     private boolean playersOnly = true;
     private boolean debug = false;
-    private int bufferThreshold = 15;
+    private int bufferThreshold = 25;
 
     public BehaviorE(GrimPlayer player) {
         super(player);
@@ -33,7 +32,7 @@ public class BehaviorE extends Check implements PacketCheck {
     public void onReload(ConfigManager config) {
         playersOnly = config.getBooleanElse("Behavior.e.players-only", true);
         debug = config.getBooleanElse("Behavior.e.debug", false);
-        bufferThreshold = config.getIntElse("Behavior.e.buffer-threshold", 15);
+        bufferThreshold = config.getIntElse("Behavior.e.buffer-threshold", 25);
     }
 
     @Override
@@ -48,46 +47,55 @@ public class BehaviorE extends Check implements PacketCheck {
             if (entity == null || entity.type != EntityTypes.PLAYER) return;
         }
 
-        // Only check when player is in air (crits require being airborne)
-        if (!player.onGround && !player.packetStateData.packetPlayerOnGround) {
-            long now = System.currentTimeMillis();
-            long interval = now - lastAttackTime;
+        if (player.onGround || player.packetStateData.packetPlayerOnGround) return;
 
-            // CPS < 4 means interval > 250ms - triggerbot waits for optimal crit timing
-            if (interval > 250 || lastAttackTime == 0) {
-                // Exempt conditions where Y position is unreliable
-                if (player.verticalCollision
-                        || player.wasTouchingWater
-                        || player.isSwimming
-                        || player.isClimbing
-                        || player.gamemode != GameMode.SURVIVAL
-                        || player.isFlying
-                        || player.inVehicle()
-                        || System.currentTimeMillis() - player.joinTime < 5000) {
-                    buffer = 0;
-                    lastAttackTime = now;
-                    return;
-                }
+        long now = System.currentTimeMillis();
+        long interval = now - lastAttackTime;
+        lastAttackTime = now;
 
-                double jumpY = player.y % 1;
-                if (Math.abs(jumpY - lastJumpY) < 1.0E-7) {
-                    buffer++;
-                    if (debug) {
-                        LogUtil.info("[BehaviorE DEBUG] " + player.getName() + " " + String.format("buffer=%.0f jumpY=%.7f delta=%.2E", buffer, jumpY, Math.abs(jumpY - lastJumpY)));
-                    } else if (buffer > bufferThreshold) {
-                        flagAndAlert(String.format("delta=%.7f", jumpY));
-                        buffer = bufferThreshold - 3; // Reset partially to keep flagging
-                    }
-                } else {
-                    if (debug && buffer > 0) {
-                        LogUtil.info("[BehaviorE DEBUG] " + player.getName() + " " + String.format("decay buffer=%.0f jumpY=%.7f lastY=%.7f", buffer, jumpY, lastJumpY));
-                    }
-                    buffer = buffer / 2;
-                }
-                lastJumpY = jumpY;
-            }
+        if (interval <= 250 && lastAttackTime != 0) return;
 
-            lastAttackTime = now;
+        if (player.verticalCollision
+                || player.wasTouchingWater
+                || player.wasTouchingLava
+                || player.isSwimming
+                || player.isClimbing
+                || player.isGliding
+                || player.isFlying
+                || player.gamemode == GameMode.CREATIVE
+                || player.gamemode == GameMode.SPECTATOR
+                || player.inVehicle()
+                || player.compensatedEntities.self.isDead
+                || player.packetStateData.lastPacketWasTeleport
+                || player.packetStateData.tryingToRiptide
+                || player.compensatedEntities.getSlowFallingAmplifier().isPresent()
+                || player.compensatedEntities.getPotionLevelForPlayer(PotionTypes.LEVITATION).isPresent()
+                || player.compensatedEntities.getPotionLevelForPlayer(PotionTypes.JUMP_BOOST).isPresent()
+                || player.stuckSpeedMultiplier.getX() < 0.99
+                || player.firstBreadKB != null || player.likelyKB != null
+                || player.firstBreadExplosion != null || player.likelyExplosions != null
+                || System.currentTimeMillis() - player.joinTime < 5000) {
+            buffer = 0;
+            lastFallDistance = -1;
+            return;
         }
+
+        double fd = player.fallDistance;
+
+        if (lastFallDistance >= 0 && Math.abs(fd - lastFallDistance) < 1.0E-6) {
+            buffer++;
+            if (debug) {
+                LogUtil.info("[BehaviorE] " + player.getName()
+                        + String.format(" buffer=%.0f fd=%.6f delta=%.2E", buffer, fd, Math.abs(fd - lastFallDistance)));
+            }
+            if (buffer > bufferThreshold) {
+                flagAndAlert(String.format("fd=%.6f", fd));
+                buffer = bufferThreshold - 5;
+            }
+        } else {
+            buffer = buffer / 2;
+        }
+
+        lastFallDistance = fd;
     }
 }
