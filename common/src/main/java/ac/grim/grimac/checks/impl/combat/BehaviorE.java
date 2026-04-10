@@ -14,15 +14,13 @@ import com.github.retrooper.packetevents.protocol.player.GameMode;
 import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
 
-@CheckData(name = "BehaviorE", configName = "Behavior", description = "Checks for consistent fallDistance on attack", experimental = true)
+@CheckData(name = "BehaviorE", configName = "Behavior", description = "Checks for impossible critical hit fall distance")
 public class BehaviorE extends Check implements PacketCheck {
 
-    private double lastFallDistance = -1;
     private double buffer = 0;
-    private long lastAttackTime = 0;
+    private double minFallDistance = 0.07;
     private boolean playersOnly = true;
     private boolean debug = false;
-    private int bufferThreshold = 25;
 
     public BehaviorE(GrimPlayer player) {
         super(player);
@@ -32,7 +30,7 @@ public class BehaviorE extends Check implements PacketCheck {
     public void onReload(ConfigManager config) {
         playersOnly = config.getBooleanElse("Behavior.e.players-only", true);
         debug = config.getBooleanElse("Behavior.e.debug", false);
-        bufferThreshold = config.getIntElse("Behavior.e.buffer-threshold", 25);
+        minFallDistance = config.getDoubleElse("Behavior.e.min-fall-distance", 0.07);
     }
 
     @Override
@@ -48,24 +46,13 @@ public class BehaviorE extends Check implements PacketCheck {
         }
 
         if (player.onGround || player.packetStateData.packetPlayerOnGround) return;
-
-        long now = System.currentTimeMillis();
-        long interval = now - lastAttackTime;
-        lastAttackTime = now;
-
-        if (interval <= 250 && lastAttackTime != 0) return;
+        if (player.fallDistance <= 0) return;
 
         if (player.verticalCollision
-                || player.wasTouchingWater
-                || player.wasTouchingLava
-                || player.isSwimming
-                || player.isClimbing
-                || player.isGliding
-                || player.isFlying
-                || player.gamemode == GameMode.CREATIVE
-                || player.gamemode == GameMode.SPECTATOR
-                || player.inVehicle()
-                || player.compensatedEntities.self.isDead
+                || player.wasTouchingWater || player.wasTouchingLava
+                || player.isSwimming || player.isClimbing || player.isGliding || player.isFlying
+                || player.gamemode == GameMode.CREATIVE || player.gamemode == GameMode.SPECTATOR
+                || player.inVehicle() || player.compensatedEntities.self.isDead
                 || player.packetStateData.lastPacketWasTeleport
                 || player.packetStateData.tryingToRiptide
                 || player.compensatedEntities.getSlowFallingAmplifier().isPresent()
@@ -74,28 +61,27 @@ public class BehaviorE extends Check implements PacketCheck {
                 || player.stuckSpeedMultiplier.getX() < 0.99
                 || player.firstBreadKB != null || player.likelyKB != null
                 || player.firstBreadExplosion != null || player.likelyExplosions != null
+                || player.uncertaintyHandler.influencedByBouncyBlock()
+                || player.uncertaintyHandler.isSteppingOnHoney
+                || player.uncertaintyHandler.lastFlyingStatusChange.hasOccurredSince(5)
+                || player.gravity < 0.072
                 || System.currentTimeMillis() - player.joinTime < 5000) {
             buffer = 0;
-            lastFallDistance = -1;
             return;
         }
 
-        double fd = player.fallDistance;
-
-        if (lastFallDistance >= 0 && Math.abs(fd - lastFallDistance) < 1.0E-6) {
-            buffer++;
-            if (debug) {
-                LogUtil.info("[BehaviorE] " + player.getName()
-                        + String.format(" buffer=%.0f fd=%.6f delta=%.2E", buffer, fd, Math.abs(fd - lastFallDistance)));
-            }
-            if (buffer > bufferThreshold) {
-                flagAndAlert(String.format("fd=%.6f", fd));
-                buffer = bufferThreshold - 5;
+        if (player.fallDistance < minFallDistance) {
+            if (++buffer > 2) {
+                if (debug) {
+                    LogUtil.info("[BehaviorE] " + player.getName()
+                            + String.format(" fd=%.6f buf=%.0f", player.fallDistance, buffer));
+                }
+                flagAndAlert(String.format("fd=%.4f", player.fallDistance));
+                buffer = 1;
             }
         } else {
-            buffer = buffer / 2;
+            buffer = Math.max(0, buffer - 0.25);
+            reward();
         }
-
-        lastFallDistance = fd;
     }
 }
