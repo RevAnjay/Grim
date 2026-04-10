@@ -14,7 +14,7 @@ import com.github.retrooper.packetevents.protocol.player.GameMode;
 import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
 
-@CheckData(name = "BehaviorE", configName = "Behavior", description = "Checks for consistent fallDistance on attack")
+@CheckData(name = "BehaviorE", configName = "Behavior", description = "Checks for consistent fallDistance on attack", experimental = true)
 public class BehaviorE extends Check implements PacketCheck {
 
     private double lastFallDistance = -1;
