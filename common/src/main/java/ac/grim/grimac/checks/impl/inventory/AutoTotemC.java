@@ -8,16 +8,21 @@ import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityStatus;
 
-@CheckData(name = "AutoTotemC", configName = "AutoTotem", description = "Checks for offhand swap", decay = 0.05)
+// Inspired by TotemGuard by Bram1903 (https://github.com/Bram1903/TotemGuard)
+// Detects suspicious re-totem packet sequence after totem pop
+@CheckData(name = "AutoTotemC", configName = "AutoTotem", description = "Checks for suspicious swap sequence after totem pop", decay = 0.025)
 public class AutoTotemC extends Check implements PacketCheck {
 
-    private int clickCountThisSession = 0;
-    private int pendingOffhandSwapSlot = -1;
-    private int flyingTicksInSession = 0;
-    private long lastTickTimestamp = 0;
+    private int totemPopTransaction = -1;
+    private boolean popConfirmed = false;
+    private int swapCount = 0;
+    private int flyingsSincePop = 0;
     private double buffer;
     private boolean debug = false;
 
@@ -31,72 +36,79 @@ public class AutoTotemC extends Check implements PacketCheck {
     }
 
     @Override
-    public void onPacketSend(PacketSendEvent event) {}
+    public void onPacketSend(PacketSendEvent event) {
+        if (event.getPacketType() == PacketType.Play.Server.ENTITY_STATUS) {
+            WrapperPlayServerEntityStatus status = new WrapperPlayServerEntityStatus(event);
+            if (status.getStatus() == 35 && status.getEntityId() == player.entityID) {
+                player.sendTransaction();
+                totemPopTransaction = player.lastTransactionSent.get();
+                popConfirmed = false;
+                swapCount = 0;
+                flyingsSincePop = 0;
+            }
+        }
+    }
 
     @Override
     public void onPacketReceive(PacketReceiveEvent event) {
+        if (totemPopTransaction != -1 && totemPopTransaction <= player.lastTransactionReceived.get()) {
+            popConfirmed = true;
+            totemPopTransaction = -1;
+        }
+
+        if (!popConfirmed) return;
+
         if (WrapperPlayClientPlayerFlying.isFlying(event.getPacketType())
                 || event.getPacketType() == PacketType.Play.Client.CLIENT_TICK_END) {
-            lastTickTimestamp = System.currentTimeMillis();
-            if (clickCountThisSession > 0) {
-                flyingTicksInSession++;
-            } else if (buffer > 0) {
-                buffer = Math.max(0, buffer - 0.025);
+            flyingsSincePop++;
+            if (flyingsSincePop > 5) {
+                popConfirmed = false;
             }
             return;
         }
+
+        boolean isSwap = false;
 
         if (event.getPacketType() == PacketType.Play.Client.CLICK_WINDOW) {
             WrapperPlayClientClickWindow click = new WrapperPlayClientClickWindow(event);
-            clickCountThisSession++;
-
-            if (click.getWindowClickType() == WrapperPlayClientClickWindow.WindowClickType.SWAP
-                    && click.getButton() == 40
-                    && click.getWindowId() == 0) {
-
-                if (clickCountThisSession == 1) {
-                    pendingOffhandSwapSlot = click.getSlot();
-
-                    if (violations > 0 && shouldModifyPackets()) {
-                        event.setCancelled(true);
-                        player.onPacketCancel();
-                        player.inventory.needResend = true;
-                    }
-                } else {
-                    pendingOffhandSwapSlot = -1;
-                }
-            } else {
-                pendingOffhandSwapSlot = -1;
+            if (click.getWindowId() == 0 && (
+                    click.getWindowClickType() == WrapperPlayClientClickWindow.WindowClickType.SWAP
+                    || click.getSlot() == 45)) {
+                isSwap = true;
             }
-            return;
+        }
+
+        if (event.getPacketType() == PacketType.Play.Client.PLAYER_DIGGING) {
+            WrapperPlayClientPlayerDigging dig = new WrapperPlayClientPlayerDigging(event);
+            if (dig.getAction() == DiggingAction.SWAP_ITEM_WITH_OFFHAND) {
+                isSwap = true;
+            }
+        }
+
+        if (isSwap) {
+            swapCount++;
         }
 
         if (event.getPacketType() == PacketType.Play.Client.CLOSE_WINDOW) {
-            if (pendingOffhandSwapSlot != -1 && clickCountThisSession == 1 && flyingTicksInSession == 0) {
-                // 1.9-1.21.1 clients can skip flying packets when standing still.
-                // 1.21.2+ always sends CLIENT_TICK_END so this doesn't apply to them.
-                boolean clientWasSkippingTicks = player.canSkipTicks()
-                        && (System.currentTimeMillis() - lastTickTimestamp) > 80;
+            if (swapCount > 0 && flyingsSincePop == 0) {
+                buffer++;
 
-                buffer += clientWasSkippingTicks ? 0.5 : 1.0;
+                if (debug) {
+                    ac.grim.grimac.utils.anticheat.LogUtil.info("[AutoTotemC] " + player.user.getName()
+                            + " pop+swap+close in same tick, swaps=" + swapCount + " buffer=" + buffer);
+                }
 
-                if (buffer >= 2.0) {
-                    if (debug) {
-                        ac.grim.grimac.utils.anticheat.LogUtil.info("[AutoTotemC] " + player.user.getName()
-                                + " isolated SWAP+CLOSE pattern, slot=" + pendingOffhandSwapSlot
-                                + " buffer=" + buffer + " skipping=" + clientWasSkippingTicks);
-                    }
-
-                    flagAndAlert("slot=" + pendingOffhandSwapSlot);
+                if (buffer > 2) {
+                    flagAndAlert("swaps=" + swapCount);
+                    buffer = 0;
                 }
             } else {
                 buffer = Math.max(0, buffer - 0.5);
                 reward();
             }
 
-            clickCountThisSession = 0;
-            pendingOffhandSwapSlot = -1;
-            flyingTicksInSession = 0;
+            popConfirmed = false;
+            swapCount = 0;
         }
     }
 }

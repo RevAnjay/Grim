@@ -165,6 +165,7 @@ public class CheckManager {
                 .put(InventoryG.class, new InventoryG(player))
                 .put(AutoTotemA.class, new AutoTotemA(player))
                 .put(AutoTotemB.class, new AutoTotemB(player))
+                .put(AutoSwapC.class, new AutoSwapC(player))
                 .put(AutoTotemC.class, new AutoTotemC(player))
                 .put(BehaviorD.class, new BehaviorD(player))
                 .put(BehaviorE.class, new BehaviorE(player))
