@@ -24,7 +24,9 @@ public class PlayerDataManager {
     public GrimPlayer getPlayer(final @NotNull UUID uuid) {
         // Is it safe to interact with this, or is this internal PacketEvents code?
         Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(uuid);
+        if (channel == null) return null;
         User user = PacketEvents.getAPI().getProtocolManager().getUser(channel);
+        if (user == null) return null;
         return getPlayer(user);
     }
 
