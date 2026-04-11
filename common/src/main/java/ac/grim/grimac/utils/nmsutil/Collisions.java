@@ -329,10 +329,11 @@ public final class Collisions {
                             final StateType type = data.getType();
                             if (edgeCount != 3 && (edgeCount != 1 || Materials.isShapeExceedsCube(type))
                                     && (edgeCount != 2 || type == StateTypes.PISTON_HEAD)) {
-                                CollisionBox collisionBox;
-                                if (BlockTags.SHULKER_BOXES.contains(type)) {
+                                CollisionBox collisionBox = null;
+                                if (!player.compensatedWorld.openShulkerBoxes.isEmpty() && BlockTags.SHULKER_BOXES.contains(type)) {
                                     collisionBox = getShulkerDynamicCollision(player, data, x, y, z);
-                                } else {
+                                }
+                                if (collisionBox == null) {
                                     collisionBox = CollisionData.getData(type).getMovementCollisionBox(player, player.getClientVersion(), data, x, y, z);
                                 }
                                 if (!onlyCheckCollide) {
@@ -351,15 +352,16 @@ public final class Collisions {
     }
 
     private static CollisionBox getShulkerDynamicCollision(GrimPlayer player, WrappedBlockState data, int x, int y, int z) {
-        Vector3i pos = new Vector3i(x, y, z);
         for (ShulkerData shulker : player.compensatedWorld.openShulkerBoxes) {
-            if (pos.equals(shulker.blockPos) && !shulker.isClosing) {
+            Vector3i pos = shulker.blockPos;
+            if (pos == null || shulker.isClosing) continue;
+            if (pos.getX() == x && pos.getY() == y && pos.getZ() == z) {
                 BlockFace facing = data.getFacing();
                 if (facing == null) facing = BlockFace.UP;
                 return shulker.getDynamicCollision(facing);
             }
         }
-        return new SimpleCollisionBox(x, y, z, x + 1, y + 1, z + 1, true);
+        return null;
     }
 
     public static Vector3dm collideBoundingBoxLegacy(Vector3dm toCollide, SimpleCollisionBox
