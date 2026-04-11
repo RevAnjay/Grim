@@ -31,6 +31,8 @@ import java.util.Set;
 
 public class PredictionEngine {
 
+    private static final double[] DECAY_08 = {1.0, 0.8, 0.64, 0.512, 0.4096, 0.32768};
+
     public static Vector3dm clampMovementToHardBorder(GrimPlayer player, Vector3dm outputVel) {
         // TODO: Reimplement
         return outputVel;
@@ -614,7 +616,7 @@ public class PredictionEngine {
         if (player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(5)) {
             double vel = player.uncertaintyHandler.lastGlidingVelocity;
             int ticksSince = player.uncertaintyHandler.lastGlidingChange.getTicksSince();
-            double decay = Math.pow(0.8, ticksSince);
+            double decay = DECAY_08[Math.min(ticksSince, DECAY_08.length - 1)];
             double transitionBonus = Math.min(vel * 0.65 * decay, 1.5);
             additionHorizontal += transitionBonus;
             bonusY += Math.min(0.5 * decay, transitionBonus);
@@ -860,6 +862,10 @@ public class PredictionEngine {
         int strafeMin = -1;
         int strafeMax = 1;
 
+        boolean stuckSpeedActive = player.stuckSpeedMultiplier.getX() != 1.0
+                || player.stuckSpeedMultiplier.getY() != 1.0
+                || player.stuckSpeedMultiplier.getZ() != 1.0;
+
         // Calculate inputs by the players known inputs on 1.21.2+
         if (player.supportsEndTick()) {
             forwardMin = forwardMax = strafeMin = strafeMax = 0;
@@ -900,7 +906,7 @@ public class PredictionEngine {
                     for (int strafe = strafeMin; strafe <= strafeMax; strafe++) {
                         for (int forward = forwardMin; forward <= forwardMax; forward++) {
                             for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
-                                if (applyStuckSpeed == 0 && player.isForceStuckSpeed()) break;
+                                if (applyStuckSpeed == 0 && (player.isForceStuckSpeed() || !stuckSpeedActive)) break;
 
                                 Vector3dm input = transformInputsToVector(player, new Vector3dm(strafe, 0, forward));
                                 VectorData result = new VectorData(possibleLastTickOutput.vector.clone()

@@ -47,9 +47,13 @@ public final class PredictionEngineRideableUtils {
     public static List<VectorData> applyInputsToVelocityPossibilities(PredictionEngine predictionEngine, Vector3dm movementVector, GrimPlayer player, Set<VectorData> possibleVectors, float speed) {
         List<VectorData> returnVectors = new ArrayList<>();
 
+        boolean stuckSpeedActive = player.stuckSpeedMultiplier.getX() != 1.0
+                || player.stuckSpeedMultiplier.getY() != 1.0
+                || player.stuckSpeedMultiplier.getZ() != 1.0;
+
         for (VectorData possibleLastTickOutput : possibleVectors) {
             for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
-                if (applyStuckSpeed == 0 && player.isForceStuckSpeed()) break;
+                if (applyStuckSpeed == 0 && (player.isForceStuckSpeed() || !stuckSpeedActive)) break;
 
                 VectorData result = new VectorData(possibleLastTickOutput.vector.clone().add(predictionEngine.getMovementResultFromInput(player, movementVector, speed, player.yaw)), possibleLastTickOutput, VectorData.VectorType.InputResult);
                 result.input = new Vector3dm(player.vehicleData.vehicleForward, 0, player.vehicleData.vehicleHorizontal);

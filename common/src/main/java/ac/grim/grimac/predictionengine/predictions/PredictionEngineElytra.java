@@ -74,6 +74,9 @@ public class PredictionEngineElytra extends PredictionEngine {
 
         int maxFireworks = player.fireworks.getMaxFireworksAppliedPossible();
         boolean hasFireworks = maxFireworks > 0 && (player.isGliding || player.wasGliding);
+        boolean stuckSpeedActive = player.stuckSpeedMultiplier.getX() != 1.0
+                || player.stuckSpeedMultiplier.getY() != 1.0
+                || player.stuckSpeedMultiplier.getZ() != 1.0;
 
         // We must bruteforce Optifine ShitMath
         for (int shitmath = 0; shitmath <= 1; shitmath++, player.trigHandler.toggleShitMath()) {
@@ -82,7 +85,7 @@ public class PredictionEngineElytra extends PredictionEngine {
             Vector3dm[] fireworkLooks = hasFireworks ? new Vector3dm[]{currentLook, lastLook} : null;
 
             for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
-                if (applyStuckSpeed == 0 && player.isForceStuckSpeed()) break;
+                if (applyStuckSpeed == 0 && (player.isForceStuckSpeed() || !stuckSpeedActive)) break;
                 for (VectorData data : possibleVectors) {
 
                     if (hasFireworks) {
