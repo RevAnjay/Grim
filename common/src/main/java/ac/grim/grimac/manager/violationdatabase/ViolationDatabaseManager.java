@@ -5,25 +5,37 @@ import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.api.plugin.GrimPlugin;
 import ac.grim.grimac.manager.init.ReloadableInitable;
 import ac.grim.grimac.manager.init.start.StartableInitable;
+import ac.grim.grimac.manager.init.stop.StoppableInitable;
 import ac.grim.grimac.manager.violationdatabase.mysql.MySQLViolationDatabase;
 import ac.grim.grimac.manager.violationdatabase.postgresql.PostgresqlViolationDatabase;
 import ac.grim.grimac.manager.violationdatabase.sqlite.SQLiteViolationDatabase;
+import ac.grim.grimac.platform.api.scheduler.TaskHandle;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.LogUtil;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class ViolationDatabaseManager implements StartableInitable, ReloadableInitable {
+public class ViolationDatabaseManager implements StartableInitable, ReloadableInitable, StoppableInitable {
+
+    private static final int MAX_QUEUE_SIZE = 1000;
+    private static final long FLUSH_INTERVAL_SECONDS = 2;
 
     private final GrimPlugin plugin;
     @Getter private boolean enabled = false;
     @Getter private boolean loaded = false;
 
-    private @NotNull ViolationDatabase database;
+    private volatile @NotNull ViolationDatabase database;
+    private final ConcurrentLinkedQueue<PendingViolation> pendingQueue = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger queueSize = new AtomicInteger();
+    private TaskHandle flushTask;
 
     public ViolationDatabaseManager(GrimPlugin plugin) {
         this.plugin = plugin;
@@ -33,11 +45,55 @@ public class ViolationDatabaseManager implements StartableInitable, ReloadableIn
     @Override
     public void start() {
         load();
+        startFlushTask();
     }
 
     @Override
     public void reload() {
+        if (flushTask != null) {
+            flushTask.cancel();
+            flushTask = null;
+        }
+        flushQueue(); // drain into old database before swapping
         load();
+        startFlushTask();
+    }
+
+    @Override
+    public void stop() {
+        if (flushTask != null) {
+            flushTask.cancel();
+            flushTask = null;
+        }
+        flushQueue(); // final drain
+        database.disconnect();
+    }
+
+    private void startFlushTask() {
+        if (flushTask != null) {
+            flushTask.cancel();
+        }
+        flushTask = GrimAPI.INSTANCE.getScheduler().getAsyncScheduler().runAtFixedRate(
+                plugin, this::flushQueue, FLUSH_INTERVAL_SECONDS, FLUSH_INTERVAL_SECONDS, TimeUnit.SECONDS
+        );
+    }
+
+    private void flushQueue() {
+        ArrayList<PendingViolation> batch = new ArrayList<>();
+        PendingViolation entry;
+        while ((entry = pendingQueue.poll()) != null) {
+            batch.add(entry);
+        }
+        queueSize.addAndGet(-batch.size());
+
+        ViolationDatabase db = this.database;
+        for (PendingViolation v : batch) {
+            try {
+                db.logAlert(v.uuid(), v.brand(), v.clientVersionName(), v.grimVersion(), v.verbose(), v.checkName(), v.vls());
+            } catch (Exception e) {
+                LogUtil.error("Failed to flush violation log entry:", e);
+            }
+        }
     }
 
     public void load() {
@@ -129,8 +185,21 @@ public class ViolationDatabaseManager implements StartableInitable, ReloadableIn
     }
 
     public void logAlert(GrimPlayer player, String verbose, String checkName, int vls) {
+        if (queueSize.get() >= MAX_QUEUE_SIZE) {
+            return; // Drop to prevent OOM under extreme spam
+        }
         String grimVersion = GrimAPI.INSTANCE.getExternalAPI().getGrimVersion();
-        GrimAPI.INSTANCE.getScheduler().getAsyncScheduler().runNow(plugin, () -> database.logAlert(player, grimVersion, verbose, checkName, vls));
+        String brand = player.getBrand() != null ? player.getBrand() : "unknown";
+        pendingQueue.add(new PendingViolation(
+                player.getUniqueId(),
+                brand,
+                player.getClientVersion().getReleaseName(),
+                grimVersion,
+                verbose,
+                checkName,
+                vls
+        ));
+        queueSize.incrementAndGet();
     }
 
     public int getLogCount(UUID player) {
@@ -139,5 +208,9 @@ public class ViolationDatabaseManager implements StartableInitable, ReloadableIn
 
     public List<Violation> getViolations(UUID player, int page, int limit) {
         return database.getViolations(player, page, limit);
+    }
+
+    private record PendingViolation(UUID uuid, String brand, String clientVersionName, String grimVersion,
+                                    String verbose, String checkName, int vls) {
     }
 }

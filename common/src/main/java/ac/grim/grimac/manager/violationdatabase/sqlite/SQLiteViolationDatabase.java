@@ -7,7 +7,6 @@ import ac.grim.grimac.manager.violationdatabase.DatabaseDialect;
 import ac.grim.grimac.manager.violationdatabase.DatabaseUtils;
 import ac.grim.grimac.manager.violationdatabase.Violation;
 import ac.grim.grimac.manager.violationdatabase.ViolationDatabase;
-import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.LogUtil;
 
 import com.github.retrooper.packetevents.PacketEvents;
@@ -163,8 +162,7 @@ public class SQLiteViolationDatabase implements ViolationDatabase {
     }
 
     @Override
-    // Update signature to match the 4 new string parameters
-    public synchronized void logAlert(GrimPlayer player, String grimVersion, String verbose, String checkName, int vls) {
+    public synchronized void logAlert(UUID uuid, String brand, String clientVersionName, String grimVersion, String verbose, String checkName, int vls) {
         try (
                 Connection connection = getConnection();
                 PreparedStatement insertLog = connection.prepareStatement(
@@ -179,20 +177,19 @@ public class SQLiteViolationDatabase implements ViolationDatabase {
                                 DatabaseConstants.VIOLATIONS_CLIENT_BRAND_ID_COLUMN + ", " +
                                 DatabaseConstants.VIOLATIONS_CLIENT_VERSION_ID_COLUMN + ", " +
                                 DatabaseConstants.VIOLATIONS_SERVER_VERSION_ID_COLUMN +
-                                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" // Total 10 parameters
+                                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )
         ) {
             String serverName = GrimAPI.INSTANCE.getConfigManager().getConfig().getStringElse("history.server-name", "Prison");
             long serverId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.SERVERS_TABLE, DatabaseConstants.SERVERS_STRING_COLUMN, serverName);
             long checkNameId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CHECK_NAMES_TABLE, DatabaseConstants.CHECK_NAMES_STRING_COLUMN, checkName);
             long grimVersionId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.GRIM_VERSIONS_TABLE, DatabaseConstants.GRIM_VERSIONS_STRING_COLUMN, grimVersion);
-            long clientBrandId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CLIENT_BRANDS_TABLE, DatabaseConstants.CLIENT_BRANDS_STRING_COLUMN, player.getBrand());
-            long clientVersionId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CLIENT_VERSIONS_TABLE, DatabaseConstants.CLIENT_VERSIONS_STRING_COLUMN, player.getClientVersion().getReleaseName());
+            long clientBrandId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CLIENT_BRANDS_TABLE, DatabaseConstants.CLIENT_BRANDS_STRING_COLUMN, brand);
+            long clientVersionId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CLIENT_VERSIONS_TABLE, DatabaseConstants.CLIENT_VERSIONS_STRING_COLUMN, clientVersionName);
             long serverVersionId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.SERVER_VERSIONS_TABLE, DatabaseConstants.SERVER_VERSIONS_STRING_COLUMN, PacketEvents.getAPI().getServerManager().getVersion().toString());
 
-            // Set parameters
             insertLog.setLong(1, serverId);
-            insertLog.setBytes(2, DatabaseUtils.uuidToBytes(player.getUniqueId()));
+            insertLog.setBytes(2, DatabaseUtils.uuidToBytes(uuid));
             insertLog.setLong(3, checkNameId);
             insertLog.setString(4, verbose);
             insertLog.setInt(5, vls);

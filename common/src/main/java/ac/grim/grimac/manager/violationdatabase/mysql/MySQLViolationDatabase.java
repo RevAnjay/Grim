@@ -7,7 +7,6 @@ import ac.grim.grimac.manager.violationdatabase.DatabaseDialect;
 import ac.grim.grimac.manager.violationdatabase.DatabaseUtils;
 import ac.grim.grimac.manager.violationdatabase.Violation;
 import ac.grim.grimac.manager.violationdatabase.ViolationDatabase;
-import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.LogUtil;
 
 import com.github.retrooper.packetevents.PacketEvents;
@@ -173,10 +172,8 @@ public class MySQLViolationDatabase implements ViolationDatabase {
     }
 
     @Override
-    // Updated method signature to accept all new parameters
-    public synchronized void logAlert(GrimPlayer player, String grimVersion, String verbose, String checkName, int vls) {
+    public synchronized void logAlert(UUID uuid, String brand, String clientVersionName, String grimVersion, String verbose, String checkName, int vls) {
         try (Connection connection = dataSource.getConnection();
-             // Updated INSERT statement with all new columns
              PreparedStatement insertAlert = connection.prepareStatement(
                      "INSERT INTO " + DatabaseConstants.VIOLATIONS_TABLE + " (" +
                              DatabaseConstants.VIOLATIONS_SERVER_ID_COLUMN + ", " +
@@ -185,33 +182,31 @@ public class MySQLViolationDatabase implements ViolationDatabase {
                              DatabaseConstants.VIOLATIONS_VERBOSE_COLUMN + ", " +
                              DatabaseConstants.VIOLATIONS_VL_COLUMN + ", " +
                              DatabaseConstants.VIOLATIONS_CREATED_AT_COLUMN + ", " +
-                             DatabaseConstants.VIOLATIONS_GRIM_VERSION_ID_COLUMN + ", " + // NEW
-                             DatabaseConstants.VIOLATIONS_CLIENT_BRAND_ID_COLUMN + ", " + // NEW
-                             DatabaseConstants.VIOLATIONS_CLIENT_VERSION_ID_COLUMN + ", " + // NEW
-                             DatabaseConstants.VIOLATIONS_SERVER_VERSION_ID_COLUMN + // NEW
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" // Total 10 parameters now
+                             DatabaseConstants.VIOLATIONS_GRIM_VERSION_ID_COLUMN + ", " +
+                             DatabaseConstants.VIOLATIONS_CLIENT_BRAND_ID_COLUMN + ", " +
+                             DatabaseConstants.VIOLATIONS_CLIENT_VERSION_ID_COLUMN + ", " +
+                             DatabaseConstants.VIOLATIONS_SERVER_VERSION_ID_COLUMN +
+                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
              )
         ) {
-            // Get or create IDs for all deduplicated strings
             String serverName = GrimAPI.INSTANCE.getConfigManager().getConfig().getStringElse("history.server-name", "Prison");
             long serverId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.SERVERS_TABLE, DatabaseConstants.SERVERS_STRING_COLUMN, serverName);
             long checkNameId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CHECK_NAMES_TABLE, DatabaseConstants.CHECK_NAMES_STRING_COLUMN, checkName);
             long grimVersionId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.GRIM_VERSIONS_TABLE, DatabaseConstants.GRIM_VERSIONS_STRING_COLUMN, grimVersion);
-            long clientBrandId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CLIENT_BRANDS_TABLE, DatabaseConstants.CLIENT_BRANDS_STRING_COLUMN, player.getBrand());
-            long clientVersionId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CLIENT_VERSIONS_TABLE, DatabaseConstants.CLIENT_VERSIONS_STRING_COLUMN, player.getClientVersion().getReleaseName());
+            long clientBrandId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CLIENT_BRANDS_TABLE, DatabaseConstants.CLIENT_BRANDS_STRING_COLUMN, brand);
+            long clientVersionId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.CLIENT_VERSIONS_TABLE, DatabaseConstants.CLIENT_VERSIONS_STRING_COLUMN, clientVersionName);
             long serverVersionId = DatabaseUtils.getOrCreateId(connection, dialect, DatabaseConstants.SERVER_VERSIONS_TABLE, DatabaseConstants.SERVER_VERSIONS_STRING_COLUMN, PacketEvents.getAPI().getServerManager().getVersion().toString());
 
-            // Set parameters for the PreparedStatement
             insertAlert.setLong(1, serverId);
-            insertAlert.setBytes(2, DatabaseUtils.uuidToBytes(player.getUniqueId()));
+            insertAlert.setBytes(2, DatabaseUtils.uuidToBytes(uuid));
             insertAlert.setLong(3, checkNameId);
             insertAlert.setString(4, verbose);
             insertAlert.setInt(5, vls);
             insertAlert.setLong(6, System.currentTimeMillis());
-            insertAlert.setLong(7, grimVersionId); // NEW
-            insertAlert.setLong(8, clientBrandId); // NEW
-            insertAlert.setLong(9, clientVersionId); // NEW
-            insertAlert.setLong(10, serverVersionId); // NEW
+            insertAlert.setLong(7, grimVersionId);
+            insertAlert.setLong(8, clientBrandId);
+            insertAlert.setLong(9, clientVersionId);
+            insertAlert.setLong(10, serverVersionId);
 
             insertAlert.execute();
         } catch (SQLException ex) {
