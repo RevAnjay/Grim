@@ -147,6 +147,7 @@ jobs:
             - name: Generate Changelog with git-cliff (for Dev Builds)
               if: ${{ !inputs.is-release-build }}
               id: git-cliff
+              continue-on-error: true
               uses: orhun/git-cliff-action@v4
               with:
                   config: cliff.toml

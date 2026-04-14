@@ -1,5 +1,4 @@
 package ac.grim.grimac.manager.violationdatabase;
-
 import ac.grim.grimac.GrimAPI;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.api.plugin.GrimPlugin;
