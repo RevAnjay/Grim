@@ -107,10 +107,11 @@ Punishments:
     checks:
       - "FarPlace"
       - "AirLiquidPlace"
+      - "AirLiquidBreak"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
   Timer:
     remove-violations-after: 300
     checks:
@@ -192,6 +193,7 @@ Punishments:
       - "Inventory"
       - "!InventoryD"
       - "!InventoryE"
+      - "AutoSwapC"
     commands:
       - "1:1 [alert]"
       - "1:1 [log]"
@@ -333,6 +335,7 @@ Punishments:
       - "!InvalidPlaceB"
       - "!FarPlace"
       - "!AirLiquidPlace"
+      - "!AirLiquidBreak"
       - "Baritone"
       - "Break"
       - "TransactionOrder"

@@ -38,16 +38,16 @@ Punishments:
       - "CrashB"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
   ExploitBan:
     remove-violations-after: 300
     checks:
       - "ExploitA"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
       - "10:0 ban %player% [GroundedGrim] Exploit (%check_name%)"
   PlaceBan:
     remove-violations-after: 300
@@ -97,10 +97,11 @@ Punishments:
     checks:
       - "FarPlace"
       - "AirLiquidPlace"
+      - "AirLiquidBreak"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
   Timer:
     remove-violations-after: 300
     checks:
@@ -165,8 +166,8 @@ Punishments:
       - "AutoTotem"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
       - "10:0 kick %player% [GroundedGrim] AutoTotem (%check_name%)"
   AirStuck:
     remove-violations-after: 300
@@ -174,18 +175,19 @@ Punishments:
       - "AirStuck"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
   InventoryKick:
     remove-violations-after: 300
     checks:
       - "Inventory"
       - "!InventoryD"
       - "!InventoryE"
+      - "AutoSwapC"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
       - "7:0 kick %player% [GroundedGrim] Inventory violation (%check_name%)"
   InventoryDKick:
     remove-violations-after: 300
@@ -263,8 +265,8 @@ Punishments:
       - "ElytraD"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
       - "7:0 kick %player% [GroundedGrim] Elytra violation (%check_name%)"
   ElytraJKick:
     remove-violations-after: 300
@@ -281,8 +283,8 @@ Punishments:
       - "ElytraM"
     commands:
       - "1:1 [alert]"
-      - "1:1 [log]"
-      - "3:0 [webhook]"
+      - "5:10 [log]"
+      - "5:0 [webhook]"
       - "10:0 kick %player% [GroundedGrim] Elytra violation (%check_name%)"
   Elytra:
     remove-violations-after: 300
@@ -323,6 +325,7 @@ Punishments:
       - "!InvalidPlaceB"
       - "!FarPlace"
       - "!AirLiquidPlace"
+      - "!AirLiquidBreak"
       - "Baritone"
       - "Break"
       - "TransactionOrder"
