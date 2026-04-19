@@ -98,24 +98,27 @@ public class SetbackTeleportUtil extends Check implements PostPredictionCheck {
                 if (offset < safePositionThreshold) {
                     lastKnownGoodPosition = new SetbackPosWithVector(
                         new Vector3d(player.x, player.y, player.z), afterTickFriction);
-                } else if (lastKnownGoodPosition != null) {
+                } else if (lastKnownGoodPosition != null && !player.isFlying) {
                     Vector3d oldPos = lastKnownGoodPosition.pos;
                     Vector3dm oldVel = lastKnownGoodPosition.vector;
 
-                    if (player.isFlying) {
-                    } else {
-                        double gravity = player.compensatedEntities.self.getAttributeValue(
-                            com.github.retrooper.packetevents.protocol.attribute.Attributes.GRAVITY);
-                        double newVelY = (oldVel.getY() - gravity) * 0.98;
-                        double newY = oldPos.getY() + newVelY;
+                    double gravity = player.compensatedEntities.self.getAttributeValue(
+                        com.github.retrooper.packetevents.protocol.attribute.Attributes.GRAVITY);
+                    double newVelY = (oldVel.getY() - gravity) * 0.98;
 
-                        newY = Math.min(newY, player.y);
-                        newY = Math.max(newY, -64);
+                    // Collision-aware Y step so we don't sink through the floor while the player keeps flagging
+                    SimpleCollisionBox savedBB = player.boundingBox;
+                    player.boundingBox = GetBoundingBox.getPlayerBoundingBox(
+                        player, oldPos.getX(), oldPos.getY(), oldPos.getZ());
+                    Vector3dm collided = Collisions.collide(player, 0, newVelY, 0);
+                    player.boundingBox = savedBB;
 
-                        lastKnownGoodPosition = new SetbackPosWithVector(
-                            new Vector3d(oldPos.getX(), newY, oldPos.getZ()),
-                            new Vector3dm(oldVel.getX(), newVelY, oldVel.getZ()));
-                    }
+                    if (collided.getY() != newVelY) newVelY = 0;
+                    double newY = Math.max(oldPos.getY() + collided.getY(), -64);
+
+                    lastKnownGoodPosition = new SetbackPosWithVector(
+                        new Vector3d(oldPos.getX(), newY, oldPos.getZ()),
+                        new Vector3dm(oldVel.getX(), newVelY, oldVel.getZ()));
                 }
             }
         }
