@@ -356,6 +356,15 @@ public class MovementCheckRunner extends Check implements PositionCheck {
             }
         }
 
+        // Vanilla stops fall flying within a tick if the player no longer has a valid glider equipped.
+        // Grim only learns about this via metadata, which can lag several ticks — long enough for a
+        // brief SWAP + START_FALL_FLYING + firework burst to land a full elytra-boost prediction before
+        // the elytra is taken back out.
+        if (player.isGliding && !player.canGlide()) {
+            player.isGliding = false;
+            player.pointThreeEstimator.updatePlayerGliding();
+        }
+
         // Multiplying by 1.3 or 1.3f results in precision loss, you must multiply by 0.3
         // The player updates their attribute if it doesn't match the last value
         // This last value can be changed by the server, however.
