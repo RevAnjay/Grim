@@ -19,7 +19,7 @@ BuildConfig.init(project)
 val baseVersion = "2.3.74"
 group = "ac.grim.grimac"
 version = VersionUtil.computeVersion(baseVersion)
-description = "GroundedGrim - fork of GrimAC by KaelusMC. Simulation anticheat for 1.8-1.21, powered by PacketEvents 2.0."
+description = "GroundedGrim - fork of GrimAC by KaelusMC. Simulation anticheat for 1.8-26.1, powered by PacketEvents 2.0."
 
 ext["timestamp"] = System.currentTimeMillis().toString()
 ext["git_branch"] = VersionUtil.getGitBranch(true)
