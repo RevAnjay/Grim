@@ -97,6 +97,7 @@ public class UncertaintyHandler {
     public int lastGlidingFireworks = 0;
     public double lastHorizontalOffset = 0;
     public double lastVerticalOffset = 0;
+    public EntityPushSimulator.PushRange pushRange = new EntityPushSimulator.PushRange();
 
     public UncertaintyHandler(GrimPlayer player) {
         this.player = player;

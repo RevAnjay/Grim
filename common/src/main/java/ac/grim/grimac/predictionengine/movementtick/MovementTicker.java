@@ -1,6 +1,7 @@
 package ac.grim.grimac.predictionengine.movementtick;
 
 import ac.grim.grimac.player.GrimPlayer;
+import ac.grim.grimac.predictionengine.EntityPushSimulator;
 import ac.grim.grimac.predictionengine.PlayerBaseTick;
 import ac.grim.grimac.predictionengine.predictions.PredictionEngine;
 import ac.grim.grimac.predictionengine.predictions.PredictionEngineElytra;
@@ -89,6 +90,7 @@ public class MovementTicker {
 
         player.uncertaintyHandler.riptideEntities.add(possibleRiptideEntities);
         player.uncertaintyHandler.collidingEntities.add(possibleCollidingEntities);
+        player.uncertaintyHandler.pushRange = EntityPushSimulator.compute(player);
     }
 
     private boolean isHorizontalCollisionSoft(Vector3dm collide) {

@@ -56,8 +56,10 @@ public class PacketEntity extends TypedPacketEntity {
     public boolean isDead = false;
     public boolean isBaby = false;
     public boolean hasGravity = true;
+    @Getter
     private ReachInterpolationData oldPacketLocation;
     private ReachInterpolationData newPacketLocation;
+
     private Object2IntMap<PotionType> potionsMap = null;
     public boolean trackEntityEquipment = false;
     private EnumMap<EquipmentSlot, ItemStack> equipment = null;
@@ -288,6 +290,12 @@ public class PacketEntity extends TypedPacketEntity {
     // TLDR If we want to get 90% of the way there everything can be hit except for fishing rod bobbers, arrows, and marker armor stands
     public boolean canHit() {
         return !this.isDead;
+    }
+
+    @Override
+    public boolean isPushable() {
+        if (isDead) return false; // vanilla LivingEntity.isPushable: !isDeadOrDying()
+        return super.isPushable();
     }
 
     public void setItemBySlot(EquipmentSlot slot, ItemStack item) {

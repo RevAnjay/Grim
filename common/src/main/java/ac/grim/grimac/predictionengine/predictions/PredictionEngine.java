@@ -1,6 +1,7 @@
 package ac.grim.grimac.predictionengine.predictions;
 
 import ac.grim.grimac.player.GrimPlayer;
+import ac.grim.grimac.predictionengine.EntityPushSimulator;
 import ac.grim.grimac.predictionengine.SneakingEstimator;
 import ac.grim.grimac.predictionengine.movementtick.MovementTickerPlayer;
 import ac.grim.grimac.utils.collisions.datatypes.SimpleCollisionBox;
@@ -643,19 +644,34 @@ public class PredictionEngine {
         double horizontalFluid = player.pointThreeEstimator.getHorizontalFluidPushingUncertainty(vector);
         additionHorizontal += horizontalFluid;
 
-        // Be somewhat careful as there is an antikb (for horizontal) that relies on this lenience
-        // 0.03 was falsing when colliding with https://i.imgur.com/7obfxG6.png
-        // 0.065 was causing issues with fast moving dolphins
-        // 0.075 seems safe?
-        //
-        // Be somewhat careful as there is an antikb (for horizontal) that relies on this lenience
+        // KB / explosion vectors need the legacy blanket width - anti-KB check at PredictionEngine.java:212
+        // threshold is 0.001 and gets compared against offset that already includes this lenience.
+        // Non-KB vectors use the simulator's push range, asymmetric and tight.
+        boolean useLegacyPushUncertainty = vector.isKnockback() || vector.isFirstBreadKb()
+                || vector.isExplosion() || vector.isFirstBreadExplosion();
         Vector3dm uncertainty = new Vector3dm(avgColliding * 0.08, additionVertical, avgColliding * 0.08);
 
         Vector3dm min = new Vector3dm(player.uncertaintyHandler.xNegativeUncertainty - additionHorizontal, -bonusY + player.uncertaintyHandler.yNegativeUncertainty, player.uncertaintyHandler.zNegativeUncertainty - additionHorizontal);
         Vector3dm max = new Vector3dm(player.uncertaintyHandler.xPositiveUncertainty + additionHorizontal, bonusY + player.uncertaintyHandler.yPositiveUncertainty, player.uncertaintyHandler.zPositiveUncertainty + additionHorizontal);
 
-        Vector3dm minVector = vector.vector.clone().add(min.subtract(uncertainty));
-        Vector3dm maxVector = vector.vector.clone().add(max.add(uncertainty));
+        Vector3dm minVector;
+        Vector3dm maxVector;
+        if (useLegacyPushUncertainty) {
+            minVector = vector.vector.clone().add(min.subtract(uncertainty));
+            maxVector = vector.vector.clone().add(max.add(uncertainty));
+        } else {
+            // Window residual for tick-skip; capped so stale window can't unlock full KB burst
+            EntityPushSimulator.PushRange push = player.uncertaintyHandler.pushRange;
+            double residual = Math.min(avgColliding * 0.08, 0.025);
+            Vector3dm minNoPush = min.clone();
+            minNoPush.setX(minNoPush.getX() + Math.min(push.minX, -residual));
+            minNoPush.setZ(minNoPush.getZ() + Math.min(push.minZ, -residual));
+            Vector3dm maxNoPush = max.clone();
+            maxNoPush.setX(maxNoPush.getX() + Math.max(push.maxX, residual));
+            maxNoPush.setZ(maxNoPush.getZ() + Math.max(push.maxZ, residual));
+            minVector = vector.vector.clone().add(minNoPush);
+            maxVector = vector.vector.clone().add(maxNoPush);
+        }
 
         // Handle the player landing within 0.03 movement, which resets Y velocity
         if (player.uncertaintyHandler.onGroundUncertain && vector.vector.getY() < 0) {
