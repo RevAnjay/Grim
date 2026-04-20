@@ -9,6 +9,12 @@ import java.util.Objects;
 
 public class BukkitTaskHandle implements TaskHandle {
 
+    public static final TaskHandle NOOP = new TaskHandle() {
+        @Override public boolean isSync() { return false; }
+        @Override public boolean isCancelled() { return true; }
+        @Override public void cancel() {}
+    };
+
     private final @NotNull BukkitTask task;
 
     @Contract(pure = true)

@@ -31,6 +31,7 @@ public class BukkitAsyncScheduler implements AsyncScheduler {
 
     @Override
     public TaskHandle runAtFixedRate(@NotNull GrimPlugin plugin, @NotNull Runnable task, long delay, long period, @NotNull TimeUnit timeUnit) {
+        if (!GrimACBukkitLoaderPlugin.LOADER.isEnabled()) return BukkitTaskHandle.NOOP;
         return new BukkitTaskHandle(bukkitScheduler.runTaskTimerAsynchronously(
                 GrimACBukkitLoaderPlugin.LOADER,
                 task,
@@ -41,6 +42,7 @@ public class BukkitAsyncScheduler implements AsyncScheduler {
 
     @Override
     public TaskHandle runAtFixedRate(@NotNull GrimPlugin plugin, @NotNull Runnable task, long initialDelayTicks, long periodTicks) {
+        if (!GrimACBukkitLoaderPlugin.LOADER.isEnabled()) return BukkitTaskHandle.NOOP;
         return new BukkitTaskHandle(bukkitScheduler.runTaskTimerAsynchronously(
                 GrimACBukkitLoaderPlugin.LOADER,
                 task,
