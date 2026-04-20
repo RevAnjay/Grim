@@ -354,6 +354,14 @@ Punishments:
     commands:
       - "20:40 [alert]"
       - "20:40 [log]"
+  AuraSnapBack:
+    remove-violations-after: 600
+    checks:
+      - "AuraSnapBack"
+    commands:
+      - "5:10 [alert]"
+      - "5:10 [log]"
+      - "10:0 [webhook]"
   Autoclicker:
     remove-violations-after: 300
     checks:
