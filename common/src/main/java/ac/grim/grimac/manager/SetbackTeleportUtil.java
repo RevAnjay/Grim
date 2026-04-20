@@ -158,6 +158,23 @@ public class SetbackTeleportUtil extends Check implements PostPredictionCheck {
         return true;
     }
 
+    public boolean executeSetbackToPosition(Vector3d targetPos) {
+        if (isExempt()) return false;
+        if (requiredSetBack == null) return false;
+        if (player.platformPlayer != null && player.noSetbackPermission) return false;
+        if (isPendingSetback()) return false;
+
+        requiredSetBack.setPlugin(false);
+        blockOffsets = true;
+
+        SetBackData data = new SetBackData(
+            new TeleportData(targetPos, null, RelativeFlag.YAW.or(RelativeFlag.PITCH),
+                             player.lastTransactionSent.get(), 0),
+            player.yaw, player.pitch, null, player.inVehicle(), false);
+        sendSetback(data);
+        return true;
+    }
+
     private boolean isExempt() {
         // Not exempting spectators here because timer check for spectators is actually valid.
         // Player hasn't spawned yet
