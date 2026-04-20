@@ -85,9 +85,12 @@ public class PacketPlayerAttack extends PacketListenerAbstract {
     }
 
     private void onAttack(PacketReceiveEvent event, GrimPlayer player, int entityId) {
+        // Aim checks need attack intent even on invalid targets, so set time pre-validity
+        player.lastAttackTime = System.currentTimeMillis();
+
         if (isInvalidEntity(event, player, entityId)) return;
 
-        player.lastAttackTime = System.currentTimeMillis();
+        player.lastAttackedEntityId = entityId;
 
         if (player.isResetItemUsageOnAttack()) {
             GrimAPI.INSTANCE.getItemResetHandler().resetItemUsage(player.platformPlayer);
