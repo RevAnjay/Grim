@@ -443,19 +443,33 @@ public class MovementCheckRunner extends Check implements PositionCheck {
         player.uncertaintyHandler.isOrWasNearGlitchyBlock = isGlitchy || player.uncertaintyHandler.isNearGlitchyBlock;
         player.uncertaintyHandler.checkForHardCollision();
 
-        if (player.isFlying != player.wasFlying)
+        if (player.isFlying != player.wasFlying
+                && !player.uncertaintyHandler.lastFlyingStatusChange.hasOccurredSince(10))
             player.uncertaintyHandler.lastFlyingStatusChange.reset();
 
         if (player.isGliding != player.wasGliding) {
-            player.uncertaintyHandler.lastGlidingChange.reset();
-            double vel = player.clientVelocity.length();
-            int fw = player.fireworks.getMaxFireworksAppliedPossible();
-            double estimated = vel;
-            for (int i = 0; i < fw; i++) {
-                estimated = estimated * 0.5 + 0.85;
+            UncertaintyHandler uh = player.uncertaintyHandler;
+            uh.glidingToggleCluster = Math.min(uh.glidingToggleCluster + 40, 200);
+
+            if (!uh.lastGlidingChange.hasOccurredSince(3)) {
+                boolean natural = player.onGround || player.lastOnGround
+                        || player.wasTouchingWater || player.wasTouchingLava
+                        || player.verticalCollision || player.horizontalCollision;
+                int clusterToggles = uh.glidingToggleCluster / 40;
+                uh.glidingSuppression = natural && clusterToggles <= 1
+                        ? 1.0
+                        : Math.max(0.15, 1.0 / clusterToggles);
+
+                uh.lastGlidingChange.reset();
+                double vel = player.clientVelocity.length();
+                int fw = player.fireworks.getMaxFireworksAppliedPossible();
+                double estimated = vel;
+                for (int i = 0; i < fw; i++) {
+                    estimated = estimated * 0.5 + 0.85;
+                }
+                uh.lastGlidingVelocity = Math.max(vel, estimated);
+                uh.lastGlidingFireworks = fw;
             }
-            player.uncertaintyHandler.lastGlidingVelocity = Math.max(vel, estimated);
-            player.uncertaintyHandler.lastGlidingFireworks = fw;
         }
 
         if (!player.inVehicle() && (Math.abs(player.x) == 2.9999999E7D || Math.abs(player.z) == 2.9999999E7D)) {

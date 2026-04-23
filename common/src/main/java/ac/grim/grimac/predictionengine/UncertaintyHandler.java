@@ -95,6 +95,8 @@ public class UncertaintyHandler {
     public final LastInstance lastShulkerBoxNearby;
     public double lastGlidingVelocity = 0;
     public int lastGlidingFireworks = 0;
+    public int glidingToggleCluster = 0; // +40 per toggle, -1/tick, /40 = count in 40t window
+    public double glidingSuppression = 1.0;
     public double lastHorizontalOffset = 0;
     public double lastVerticalOffset = 0;
     public EntityPushSimulator.PushRange pushRange = new EntityPushSimulator.PushRange();
@@ -127,6 +129,7 @@ public class UncertaintyHandler {
         pistonX.add(0d);
         pistonY.add(0d);
         pistonZ.add(0d);
+        if (glidingToggleCluster > 0) glidingToggleCluster--;
         isStepMovement = false;
 
         isSteppingNearShulker = false;
