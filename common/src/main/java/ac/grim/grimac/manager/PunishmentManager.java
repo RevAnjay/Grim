@@ -80,14 +80,20 @@ public class PunishmentManager implements ConfigReloadable {
                 }
 
                 for (String command : commands) {
-                    String firstNum = command.substring(0, command.indexOf(":"));
-                    String secondNum = command.substring(command.indexOf(":"), command.indexOf(" "));
-
-                    int threshold = Integer.parseInt(firstNum);
-                    int interval = Integer.parseInt(secondNum.substring(1));
-                    String commandString = command.substring(command.indexOf(" ") + 1);
-
-                    parsed.add(new ParsedCommand(threshold, interval, commandString));
+                    try {
+                        int colon = command.indexOf(":");
+                        int space = command.indexOf(" ");
+                        if (colon <= 0 || space <= colon) {
+                            LogUtil.error("Skipping malformed punishment entry (checks=" + checks + ", expected threshold:interval command): " + command);
+                            continue;
+                        }
+                        int threshold = Integer.parseInt(command.substring(0, colon));
+                        int interval = Integer.parseInt(command.substring(colon + 1, space));
+                        String commandString = command.substring(space + 1);
+                        parsed.add(new ParsedCommand(threshold, interval, commandString));
+                    } catch (NumberFormatException ex) {
+                        LogUtil.error("Skipping punishment entry (checks=" + checks + ") - threshold/interval not a number: " + command);
+                    }
                 }
 
                 groups.add(new PunishGroup(checksList, parsed, removeViolationsAfter * 1000));
