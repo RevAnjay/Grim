@@ -32,7 +32,7 @@ import java.util.Set;
 
 public class PredictionEngine {
 
-    private static final double[] DECAY_08 = {1.0, 0.5, 0.25};
+    private static final double[] DECAY_08 = {1.0, 0.7, 0.49, 0.343};
 
     public static Vector3dm clampMovementToHardBorder(GrimPlayer player, Vector3dm outputVel) {
         // TODO: Reimplement
@@ -614,15 +614,14 @@ public class PredictionEngine {
             bonusY += scaledTolerance;
         }
 
-        if (player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(2)) {
+        if (player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(3)) {
             double vel = player.uncertaintyHandler.lastGlidingVelocity;
             int ticksSince = player.uncertaintyHandler.lastGlidingChange.getTicksSince();
             double decay = DECAY_08[Math.min(ticksSince, DECAY_08.length - 1)];
-            // 0.85 = max firework-boost delta; suppression attenuates rapid-toggle clusters
-            double transitionBonus = Math.min(vel * 0.65 * decay, 0.85)
-                    * player.uncertaintyHandler.glidingSuppression;
-            additionHorizontal += transitionBonus;
-            bonusY += Math.min(0.3 * decay, transitionBonus);
+            double hBonus = Math.min(vel * 0.65 * decay, 0.85);
+            double yBonus = Math.min(0.3 * decay, hBonus) * player.uncertaintyHandler.glidingSuppression;
+            additionHorizontal += hBonus;
+            bonusY += yBonus;
         } else if (player.isGliding && (player.onGround || player.lastOnGround || player.verticalCollision)) {
             double transitionBonus = Math.min(0.25, player.clientVelocity.length() * 0.10);
             additionHorizontal += transitionBonus;

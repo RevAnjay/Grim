@@ -361,8 +361,16 @@ public class MovementCheckRunner extends Check implements PositionCheck {
         // brief SWAP + START_FALL_FLYING + firework burst to land a full elytra-boost prediction before
         // the elytra is taken back out.
         if (player.isGliding && !player.canGlide()) {
-            player.isGliding = false;
-            player.pointThreeEstimator.updatePlayerGliding();
+            boolean hasFirework = player.fireworks.getMaxFireworksAppliedPossible() > 0;
+            if (hasFirework || player.elytraStopPending >= 3) {
+                player.isGliding = false;
+                player.pointThreeEstimator.updatePlayerGliding();
+                player.elytraStopPending = 0;
+            } else {
+                player.elytraStopPending++;
+            }
+        } else if (player.canGlide()) {
+            player.elytraStopPending = 0;
         }
 
         // Multiplying by 1.3 or 1.3f results in precision loss, you must multiply by 0.3
@@ -458,7 +466,7 @@ public class MovementCheckRunner extends Check implements PositionCheck {
                 int clusterToggles = uh.glidingToggleCluster / 40;
                 uh.glidingSuppression = natural && clusterToggles <= 1
                         ? 1.0
-                        : Math.max(0.15, 1.0 / clusterToggles);
+                        : Math.max(0.4, 1.0 / clusterToggles);
 
                 uh.lastGlidingChange.reset();
                 double vel = player.clientVelocity.length();

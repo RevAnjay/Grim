@@ -139,25 +139,39 @@ public class DebugHandler extends AbstractDebugHandler implements PostPrediction
                 .append(O_PREFIX.color(NamedTextColor.NAMES.value(color)))
                 .append(Component.text(offset));
 
-        if (player.isGliding || player.wasGliding) {
-            String elytraState = " G:" + (player.isGliding ? "1" : "0") + (player.wasGliding ? "1" : "0")
+        int glideChange = player.uncertaintyHandler.lastGlidingChange.getTicksSince();
+        int statusChange = player.uncertaintyHandler.lastFlyingStatusChange.getTicksSince();
+        boolean showGlide = player.isGliding || player.wasGliding || glideChange < 40 || statusChange < 40;
+        String elytraState = "";
+        if (showGlide) {
+            String chestType = player.inventory.getChestplate().getType() == com.github.retrooper.packetevents.protocol.item.type.ItemTypes.ELYTRA ? "E" : "-";
+            double dy = predicted.getY() - actually.getY();
+            double dx = predicted.getX() - actually.getX();
+            double dz = predicted.getZ() - actually.getZ();
+            elytraState = " G:" + (player.isGliding ? "1" : "0") + (player.wasGliding ? "1" : "0")
+                    + " cg:" + (player.canGlide() ? "1" : "0")
+                    + " cp:" + chestType
+                    + " fly:" + (player.isFlying ? "1" : "0")
                     + " gnd:" + (player.onGround ? "1" : "0") + (player.lastOnGround ? "1" : "0")
                     + " vCol:" + (player.verticalCollision ? "1" : "0")
+                    + " hCol:" + (player.horizontalCollision ? "1" : "0")
                     + " v:" + String.format("%.2f", player.clientVelocity.length())
-                    + " fw:" + player.fireworks.getMaxFireworksAppliedPossible();
+                    + " av:" + String.format("%.2f", player.actualMovement.length())
+                    + " dXYZ:" + String.format("%+.2f/%+.2f/%+.2f", dx, dy, dz)
+                    + " fw:" + player.fireworks.getMaxFireworksAppliedPossible()
+                    + " gc:" + (glideChange > 99 ? "-" : String.valueOf(glideChange))
+                    + " sc:" + (statusChange > 99 ? "-" : String.valueOf(statusChange))
+                    + " tc:" + player.uncertaintyHandler.glidingToggleCluster
+                    + " sup:" + String.format("%.2f", player.uncertaintyHandler.glidingSuppression)
+                    + " lgv:" + String.format("%.2f", player.uncertaintyHandler.lastGlidingVelocity)
+                    + " lgf:" + player.uncertaintyHandler.lastGlidingFireworks
+                    + " p:" + player.getTransactionPing() + "ms";
             o = o.append(Component.text(elytraState).color(NamedTextColor.AQUA));
         }
 
         String plainLine = "P: " + predicted.getX() + " " + predicted.getY() + " " + predicted.getZ()
                 + " | A: " + actually.getX() + " " + actually.getY() + " " + actually.getZ()
-                + " | O: " + offset
-                + (player.isGliding || player.wasGliding
-                    ? " | G:" + (player.isGliding ? "1" : "0") + (player.wasGliding ? "1" : "0")
-                      + " gnd:" + (player.onGround ? "1" : "0") + (player.lastOnGround ? "1" : "0")
-                      + " vCol:" + (player.verticalCollision ? "1" : "0")
-                      + " v:" + String.format("%.2f", player.clientVelocity.length())
-                      + " fw:" + player.fireworks.getMaxFireworksAppliedPossible()
-                    : "");
+                + " | O: " + offset + elytraState;
         pasteBuffer.add(plainLine);
 
         String prefix = player.platformPlayer == null ? "null" : player.platformPlayer.getName() + " ";

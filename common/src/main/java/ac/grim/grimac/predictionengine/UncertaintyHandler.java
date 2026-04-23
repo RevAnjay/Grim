@@ -184,7 +184,8 @@ public class UncertaintyHandler {
         fishingRodPulls.clear();
 
         int maxFireworks = player.fireworks.getMaxFireworksAppliedPossible();
-        if (maxFireworks <= 0 || (!player.isGliding && !player.wasGliding)) {
+        boolean postSwap = !player.isGliding && !player.wasGliding && lastGlidingChange.hasOccurredSince(4);
+        if (maxFireworks <= 0 || (!player.isGliding && !player.wasGliding && !postSwap)) {
             return;
         }
 
@@ -198,11 +199,12 @@ public class UncertaintyHandler {
                  totalBoost,  totalBoost,  totalBoost
             );
         } else {
-            double residualX = Math.min(fireworkResidualCap, Math.max(0.01,
+            double cap = postSwap ? 0.15 : fireworkResidualCap;
+            double residualX = Math.min(cap, Math.max(0.01,
                 0.5 * Math.abs(currentLook.getX() - lastLook.getX()) * 0.85 * maxFireworks));
-            double residualY = Math.min(fireworkResidualCap, Math.max(0.01,
+            double residualY = Math.min(cap, Math.max(0.01,
                 0.5 * Math.abs(currentLook.getY() - lastLook.getY()) * 0.85 * maxFireworks));
-            double residualZ = Math.min(fireworkResidualCap, Math.max(0.01,
+            double residualZ = Math.min(cap, Math.max(0.01,
                 0.5 * Math.abs(currentLook.getZ() - lastLook.getZ()) * 0.85 * maxFireworks));
             fireworksBox = new SimpleCollisionBox(
                 -residualX, -residualY, -residualZ,
