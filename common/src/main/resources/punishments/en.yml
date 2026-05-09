@@ -230,7 +230,7 @@ Punishments:
       - "NoFall"
     commands:
       - "100:40 [alert]"
-      - "100:40 [log]"
+      - "1:1 [log]"
       - "100:100 [webhook]"
       - "100:100 [proxy]"
   Knockback:
@@ -240,7 +240,7 @@ Punishments:
       - "Explosion"
     commands:
       - "5:5 [alert]"
-      - "5:5 [log]"
+      - "1:1 [log]"
       - "20:20 [webhook]"
       - "20:20 [proxy]"
   Post:
@@ -249,7 +249,7 @@ Punishments:
       - "Post"
     commands:
       - "20:20 [alert]"
-      - "20:20 [log]"
+      - "1:1 [log]"
       - "40:40 [webhook]"
       - "40:40 [proxy]"
   BadPackets:
@@ -270,7 +270,7 @@ Punishments:
       - "PacketOrder"
     commands:
       - "20:20 [alert]"
-      - "20:20 [log]"
+      - "1:1 [log]"
       - "40:40 [webhook]"
       - "40:40 [proxy]"
   ElytraKick:
@@ -290,10 +290,10 @@ Punishments:
     checks:
       - "ElytraJ"
     commands:
-      - "1:1 [alert]"
+      - "5:3 [alert]"
       - "1:1 [log]"
-      - "2:0 [webhook]"
-      - "4:0 kick %player% [GroundedGrim] Elytra violation (%check_name%)"
+      - "5:3 [webhook]"
+      - "5:3 [proxy]"
   ElytraMKick:
     remove-violations-after: 300
     checks:
@@ -368,7 +368,7 @@ Punishments:
       - "ExploitB"
     commands:
       - "10:5 [alert]"
-      - "10:5 [log]"
+      - "1:1 [log]"
       - "20:10 [webhook]"
       - "20:10 [proxy]"
   Combat:
@@ -378,7 +378,7 @@ Punishments:
       - "Aim"
     commands:
       - "20:40 [alert]"
-      - "20:40 [log]"
+      - "1:1 [log]"
   AuraSnapBack:
     remove-violations-after: 600
     checks:
@@ -387,10 +387,11 @@ Punishments:
       - "5:10 [alert]"
       - "5:10 [log]"
       - "10:0 [webhook]"
+  # As of 2.2.10, there are no AutoClicker checks and this is a placeholder. Grim will include AutoClicker checks in the future.
   Autoclicker:
     remove-violations-after: 300
     checks:
       - "Autoclicker"
     commands:
       - "20:40 [alert]"
-      - "20:40 [log]"
+      - "1:1 [log]"

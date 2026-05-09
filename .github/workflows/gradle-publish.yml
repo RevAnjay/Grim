@@ -12,6 +12,11 @@ on:
                 description: 'Upload to Modrinth & API? (Uncheck for a dry run)'
                 type: boolean
                 default: true
+            use-modrinth-fallback:
+                description: 'Fall back to Modrinth for changelog range when push payload is unavailable'
+                required: false
+                type: boolean
+                default: true
             runner:
                 description: 'The runner to use for the build job.'
                 required: false
@@ -41,6 +46,7 @@ jobs:
             release-version-type: alpha # Dev builds are always 'alpha'
             run-build-scan: ${{ github.event.inputs.run-build-scan == 'true' }}
             publish-artifacts: ${{ github.event.inputs.publish-artifacts != 'false' }}
+            use-modrinth-fallback: ${{ github.event.inputs.use-modrinth-fallback != 'false' }}
         secrets:
             MODRINTH_ID: ${{ secrets.MODRINTH_ID }}
             MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
