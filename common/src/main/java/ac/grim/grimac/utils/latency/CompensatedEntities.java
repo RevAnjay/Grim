@@ -158,14 +158,18 @@ public class CompensatedEntities {
     }
 
     private void tickPassenger(PacketEntity riding, PacketEntity passenger) {
-        if (riding == null || passenger == null) {
+        tickPassenger(riding, passenger, 0);
+    }
+
+    private void tickPassenger(PacketEntity riding, PacketEntity passenger, int depth) {
+        if (riding == null || passenger == null || depth > 16) {
             return;
         }
 
         passenger.setPositionRaw(player, riding.getPossibleLocationBoxes().offset(0, BoundingBoxSize.getMyRidingOffset(riding) + BoundingBoxSize.getPassengerRidingOffset(player, passenger), 0));
 
-        for (PacketEntity passengerPassenger : riding.passengers) {
-            tickPassenger(passenger, passengerPassenger);
+        for (PacketEntity passengerPassenger : passenger.passengers) {
+            tickPassenger(passenger, passengerPassenger, depth + 1);
         }
     }
 
