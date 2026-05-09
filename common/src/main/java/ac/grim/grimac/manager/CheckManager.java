@@ -173,6 +173,7 @@ public class CheckManager {
                 .put(TriggerA.class, new TriggerA(player))
                 .put(AirStuck.class, new AirStuck(player))
                 .put(ElytraN.class, new ElytraN(player))
+                .put(ElytraO.class, new ElytraO(player))
                 .put(PacketLogger.class, new PacketLogger(player))
                 .put(SetbackBlocker.class, new SetbackBlocker(player)) // Must be last class otherwise we can't check while blocking packets
                 .build();
@@ -234,6 +235,7 @@ public class CheckManager {
                 .put(ElytraI.class, new ElytraI(player))
                 .put(ElytraL.class, new ElytraL(player))
                 .put(ElytraM.class, new ElytraM(player))
+                .put(ElytraP.class, new ElytraP(player))
                 .put(SetbackTeleportUtil.class, new SetbackTeleportUtil(player)) // Avoid teleporting to new position, update safe pos last
                 .put(CompensatedFireworks.class, player.fireworks)
                 .put(SneakingEstimator.class, new SneakingEstimator(player))
