@@ -72,8 +72,20 @@ public class PredictionEngineElytra extends PredictionEngine {
     public List<VectorData> applyInputsToVelocityPossibilities(GrimPlayer player, Set<VectorData> possibleVectors, float speed) {
         List<VectorData> results = new ArrayList<>();
 
-        int maxFireworks = player.fireworks.getMaxFireworksAppliedPossible();
-        boolean hasFireworks = maxFireworks > 0 && (player.isGliding || player.wasGliding);
+        int rawMaxFireworks = player.fireworks.getMaxFireworksAppliedPossible();
+        // When server has no glider, server can only realistically apply a single boost before its
+        // own stopFallFlying triggers. In the toggle window we allow up to 2 to cover swap-in-flight
+        // legit cases (1 just-fired + 1 still active), but never raw — otherwise N-rocket brute
+        // forcing in the transition window grants ~0.85*N m/tick burst tolerance per tick.
+        int maxFireworks;
+        if (!player.isGliding && !player.canGlide()) {
+            int cap = player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(4) ? 2 : 1;
+            maxFireworks = Math.min(cap, rawMaxFireworks);
+        } else {
+            maxFireworks = rawMaxFireworks;
+        }
+        boolean hasFireworks = maxFireworks > 0 && (player.isGliding || player.wasGliding
+                || player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(4));
         boolean stuckSpeedActive = player.stuckSpeedMultiplier.getX() != 1.0
                 || player.stuckSpeedMultiplier.getY() != 1.0
                 || player.stuckSpeedMultiplier.getZ() != 1.0;

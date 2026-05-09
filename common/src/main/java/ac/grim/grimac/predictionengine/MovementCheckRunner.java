@@ -356,23 +356,6 @@ public class MovementCheckRunner extends Check implements PositionCheck {
             }
         }
 
-        // Vanilla stops fall flying within a tick if the player no longer has a valid glider equipped.
-        // Grim only learns about this via metadata, which can lag several ticks — long enough for a
-        // brief SWAP + START_FALL_FLYING + firework burst to land a full elytra-boost prediction before
-        // the elytra is taken back out.
-        if (player.isGliding && !player.canGlide()) {
-            boolean hasFirework = player.fireworks.getMaxFireworksAppliedPossible() > 0;
-            if (hasFirework || player.elytraStopPending >= 3) {
-                player.isGliding = false;
-                player.pointThreeEstimator.updatePlayerGliding();
-                player.elytraStopPending = 0;
-            } else {
-                player.elytraStopPending++;
-            }
-        } else if (player.canGlide()) {
-            player.elytraStopPending = 0;
-        }
-
         // Multiplying by 1.3 or 1.3f results in precision loss, you must multiply by 0.3
         // The player updates their attribute if it doesn't match the last value
         // This last value can be changed by the server, however.
@@ -456,28 +439,7 @@ public class MovementCheckRunner extends Check implements PositionCheck {
             player.uncertaintyHandler.lastFlyingStatusChange.reset();
 
         if (player.isGliding != player.wasGliding) {
-            UncertaintyHandler uh = player.uncertaintyHandler;
-            uh.glidingToggleCluster = Math.min(uh.glidingToggleCluster + 40, 200);
-
-            if (!uh.lastGlidingChange.hasOccurredSince(3)) {
-                boolean natural = player.onGround || player.lastOnGround
-                        || player.wasTouchingWater || player.wasTouchingLava
-                        || player.verticalCollision || player.horizontalCollision;
-                int clusterToggles = uh.glidingToggleCluster / 40;
-                uh.glidingSuppression = natural && clusterToggles <= 1
-                        ? 1.0
-                        : Math.max(0.4, 1.0 / clusterToggles);
-
-                uh.lastGlidingChange.reset();
-                double vel = player.clientVelocity.length();
-                int fw = player.fireworks.getMaxFireworksAppliedPossible();
-                double estimated = vel;
-                for (int i = 0; i < fw; i++) {
-                    estimated = estimated * 0.5 + 0.85;
-                }
-                uh.lastGlidingVelocity = Math.max(vel, estimated);
-                uh.lastGlidingFireworks = fw;
-            }
+            player.uncertaintyHandler.lastGlidingChange.reset();
         }
 
         if (!player.inVehicle() && (Math.abs(player.x) == 2.9999999E7D || Math.abs(player.z) == 2.9999999E7D)) {

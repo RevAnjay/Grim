@@ -93,10 +93,6 @@ public class UncertaintyHandler {
     public final LastInstance lastVehicleSwitch;
     public final LastInstance lastGlidingChange;
     public final LastInstance lastShulkerBoxNearby;
-    public double lastGlidingVelocity = 0;
-    public int lastGlidingFireworks = 0;
-    public int glidingToggleCluster = 0; // +40 per toggle, -1/tick, /40 = count in 40t window
-    public double glidingSuppression = 1.0;
     public double lastHorizontalOffset = 0;
     public double lastVerticalOffset = 0;
     public EntityPushSimulator.PushRange pushRange = new EntityPushSimulator.PushRange();
@@ -129,7 +125,6 @@ public class UncertaintyHandler {
         pistonX.add(0d);
         pistonY.add(0d);
         pistonZ.add(0d);
-        if (glidingToggleCluster > 0) glidingToggleCluster--;
         isStepMovement = false;
 
         isSteppingNearShulker = false;
@@ -184,8 +179,7 @@ public class UncertaintyHandler {
         fishingRodPulls.clear();
 
         int maxFireworks = player.fireworks.getMaxFireworksAppliedPossible();
-        boolean postSwap = !player.isGliding && !player.wasGliding && lastGlidingChange.hasOccurredSince(4);
-        if (maxFireworks <= 0 || (!player.isGliding && !player.wasGliding && !postSwap)) {
+        if (maxFireworks <= 0 || (!player.isGliding && !player.wasGliding)) {
             return;
         }
 
@@ -199,12 +193,11 @@ public class UncertaintyHandler {
                  totalBoost,  totalBoost,  totalBoost
             );
         } else {
-            double cap = postSwap ? 0.15 : fireworkResidualCap;
-            double residualX = Math.min(cap, Math.max(0.01,
+            double residualX = Math.min(fireworkResidualCap, Math.max(0.01,
                 0.5 * Math.abs(currentLook.getX() - lastLook.getX()) * 0.85 * maxFireworks));
-            double residualY = Math.min(cap, Math.max(0.01,
+            double residualY = Math.min(fireworkResidualCap, Math.max(0.01,
                 0.5 * Math.abs(currentLook.getY() - lastLook.getY()) * 0.85 * maxFireworks));
-            double residualZ = Math.min(cap, Math.max(0.01,
+            double residualZ = Math.min(fireworkResidualCap, Math.max(0.01,
                 0.5 * Math.abs(currentLook.getZ() - lastLook.getZ()) * 0.85 * maxFireworks));
             fireworksBox = new SimpleCollisionBox(
                 -residualX, -residualY, -residualZ,

@@ -161,10 +161,6 @@ public class DebugHandler extends AbstractDebugHandler implements PostPrediction
                     + " fw:" + player.fireworks.getMaxFireworksAppliedPossible()
                     + " gc:" + (glideChange > 99 ? "-" : String.valueOf(glideChange))
                     + " sc:" + (statusChange > 99 ? "-" : String.valueOf(statusChange))
-                    + " tc:" + player.uncertaintyHandler.glidingToggleCluster
-                    + " sup:" + String.format("%.2f", player.uncertaintyHandler.glidingSuppression)
-                    + " lgv:" + String.format("%.2f", player.uncertaintyHandler.lastGlidingVelocity)
-                    + " lgf:" + player.uncertaintyHandler.lastGlidingFireworks
                     + " p:" + player.getTransactionPing() + "ms";
             o = o.append(Component.text(elytraState).color(NamedTextColor.AQUA));
         }

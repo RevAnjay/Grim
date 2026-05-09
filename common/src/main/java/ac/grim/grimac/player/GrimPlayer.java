@@ -175,7 +175,6 @@ public class GrimPlayer implements GrimUser {
     public boolean isClimbing;
     public boolean isGliding;
     public boolean wasGliding;
-    public int elytraStopPending;
     public boolean isRiptidePose = false;
     public double fallDistance;
     public SimpleCollisionBox boundingBox = GetBoundingBox.getBoundingBoxFromPosAndSizeRaw(x, y, z, 0.6f, 1.8f);

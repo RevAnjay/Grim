@@ -32,8 +32,6 @@ import java.util.Set;
 
 public class PredictionEngine {
 
-    private static final double[] DECAY_08 = {1.0, 0.7, 0.49, 0.343};
-
     public static Vector3dm clampMovementToHardBorder(GrimPlayer player, Vector3dm outputVel) {
         // TODO: Reimplement
         return outputVel;
@@ -614,18 +612,19 @@ public class PredictionEngine {
             bonusY += scaledTolerance;
         }
 
-        if (player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(3)) {
-            double vel = player.uncertaintyHandler.lastGlidingVelocity;
-            int ticksSince = player.uncertaintyHandler.lastGlidingChange.getTicksSince();
-            double decay = DECAY_08[Math.min(ticksSince, DECAY_08.length - 1)];
-            double hBonus = Math.min(vel * 0.65 * decay, 0.85);
-            double yBonus = Math.min(0.3 * decay, hBonus) * player.uncertaintyHandler.glidingSuppression;
-            additionHorizontal += hBonus;
-            bonusY += yBonus;
-        } else if (player.isGliding && (player.onGround || player.lastOnGround || player.verticalCollision)) {
-            double transitionBonus = Math.min(0.25, player.clientVelocity.length() * 0.10);
-            additionHorizontal += transitionBonus;
-            bonusY += 0.25;
+        // Mace + wind-charge launch can push Y impulse to ~+1.5 m/tick on the same tick
+        // a START_FALL_FLYING fires. Bonus only on first 3 ticks of the toggle so spam-toggle
+        // cannot keep this window open continuously.
+        if (player.isGliding && (player.onGround || player.lastOnGround || player.verticalCollision)
+                && player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(2)) {
+            additionHorizontal += Math.min(0.3, player.clientVelocity.length() * 0.15);
+            bonusY += 0.45;
+        }
+
+        if (player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(4)) {
+            double decay = 1.0 - player.uncertaintyHandler.lastGlidingChange.getTicksSince() / 5.0;
+            additionHorizontal += 0.10 * decay;
+            bonusY += 0.20 * decay;
         }
 
         boolean isElytraFlight = player.isGliding && player.wasGliding;

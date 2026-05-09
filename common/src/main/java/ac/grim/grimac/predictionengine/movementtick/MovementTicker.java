@@ -4,6 +4,7 @@ import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.predictionengine.EntityPushSimulator;
 import ac.grim.grimac.predictionengine.PlayerBaseTick;
 import ac.grim.grimac.predictionengine.predictions.PredictionEngine;
+import ac.grim.grimac.predictionengine.predictions.PredictionEngineDualState;
 import ac.grim.grimac.predictionengine.predictions.PredictionEngineElytra;
 import ac.grim.grimac.utils.collisions.datatypes.SimpleCollisionBox;
 import ac.grim.grimac.utils.data.VectorData;
@@ -486,6 +487,12 @@ public class MovementTicker {
 
                     new PredictionEngineElytra().guessBestMovement(0, player);
                 }
+            } else if (player.wasGliding
+                    || player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(4)) {
+                float blockFriction = BlockProperties.getFriction(player, player.mainSupportingBlockData, new Vector3d(player.lastX, player.lastY, player.lastZ));
+                player.friction = player.lastOnGround ? blockFriction * 0.91f : 0.91f;
+
+                new PredictionEngineDualState().guessBestMovement(BlockProperties.getFrictionInfluencedSpeed(blockFriction, player), player);
             } else {
                 float blockFriction = BlockProperties.getFriction(player, player.mainSupportingBlockData, new Vector3d(player.lastX, player.lastY, player.lastZ));
                 player.friction = player.lastOnGround ? blockFriction * 0.91f : 0.91f;
