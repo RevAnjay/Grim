@@ -413,6 +413,8 @@ public class CheckManagerListener extends PacketListenerAbstract {
             teleportData = flying.hasPositionChanged() && flying.hasRotationChanged() ? player.getSetbackTeleportUtil().checkTeleportQueue(position.getX(), position.getY(), position.getZ()) : new TeleportAcceptData();
             player.packetStateData.lastPacketWasTeleport = teleportData.isTeleport();
 
+            player.freezeDetector.onFlyingPacket();
+
             if (flying.hasRotationChanged() && !flying.hasPositionChanged() && !flying.isOnGround() && !flying.isHorizontalCollision()) {
                 List<RotationData> rotations = new ArrayList<>();
 

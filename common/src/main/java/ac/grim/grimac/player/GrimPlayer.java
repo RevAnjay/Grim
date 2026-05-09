@@ -218,6 +218,7 @@ public class GrimPlayer implements GrimUser {
     public final CompensatedDashableEntities dashableEntities;
     public final CompensatedInventory inventory;
     public final LatencyUtils latencyUtils = new LatencyUtils(this);
+    public final FreezeDetector freezeDetector = new FreezeDetector(this);
     public final PointThreeEstimator pointThreeEstimator;
     public final TrigHandler trigHandler = new TrigHandler(this);
     public final PacketStateData packetStateData = new PacketStateData();
@@ -429,6 +430,7 @@ public class GrimPlayer implements GrimUser {
                 lastTransReceived = System.currentTimeMillis();
                 transactionPing = (System.nanoTime() - data.second());
                 playerClockAtLeast = data.second();
+                freezeDetector.onTransactionReceived(transactionPing / 1_000_000L);
             } while (data.first() != id);
 
             // A transaction means a new tick, so handle any block interactions

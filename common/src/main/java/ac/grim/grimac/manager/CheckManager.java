@@ -25,6 +25,7 @@ import ac.grim.grimac.checks.impl.misc.GhostBlockMitigation;
 import ac.grim.grimac.checks.impl.misc.PacketLogger;
 import ac.grim.grimac.checks.impl.misc.Post;
 import ac.grim.grimac.checks.impl.misc.TransactionOrder;
+import ac.grim.grimac.checks.impl.combat.FreezeAttack;
 import ac.grim.grimac.checks.impl.movement.AirStuck;
 import ac.grim.grimac.checks.impl.movement.NoSlow;
 import ac.grim.grimac.checks.impl.movement.PredictionRunner;
@@ -98,6 +99,7 @@ public class CheckManager {
         packetChecks = new ImmutableClassToInstanceMap.Builder<PacketCheck>()
                 .put(CompensatedCameraEntity.class, player.cameraEntity)
                 .put(PacketOrderProcessor.class, player.packetOrderProcessor)
+                .put(FreezeAttack.class, new FreezeAttack(player))
                 .put(Reach.class, new Reach(player))
                 .put(PacketEntityReplication.class, packetEntityReplication)
                 .put(PacketChangeGameState.class, new PacketChangeGameState(player))

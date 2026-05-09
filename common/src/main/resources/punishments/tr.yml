@@ -309,6 +309,14 @@ Punishments:
       - "1:1 [alert]"
       - "1:1 [log]"
       - "3:0 [webhook]"
+  FreezeAttackAlert:
+    remove-violations-after: 300
+    checks:
+      - "FreezeAttack"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "3:0 [webhook]"
   Elytra:
     remove-violations-after: 300
     checks:
