@@ -14,13 +14,20 @@ Punishments:
       - "BadPacketsS"
       - "BadPacketsY"
       - "SelfInteract"
-      - "BehaviorA"
     commands:
       - "1:1 [alert]"
       - "1:1 [log]"
       - "1:0 [webhook]"
       - "1:0 [proxy]"
       - "1:0 ban %player% [GroundedGrim] Protocol violation (%check_name%)"
+  BehaviorAAlert:
+    remove-violations-after: 300
+    checks:
+      - "BehaviorA"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "3:0 [webhook]"
   CrashBan:
     remove-violations-after: 300
     checks:
@@ -150,7 +157,7 @@ Punishments:
       - "1:1 [alert]"
       - "1:1 [log]"
       - "1:0 [webhook]"
-      - "2:0 kick %player% [GroundedGrim] Combat violation (%check_name%)"
+      - "7:0 kick %player% [GroundedGrim] Combat violation (%check_name%)"
   TriggerbotKick:
     remove-violations-after: 300
     checks:
@@ -286,6 +293,22 @@ Punishments:
       - "5:10 [log]"
       - "5:0 [webhook]"
       - "10:0 kick %player% [GroundedGrim] Elytra violation (%check_name%)"
+  ElytraOAlert:
+    remove-violations-after: 300
+    checks:
+      - "ElytraO"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "3:0 [webhook]"
+  ElytraPAlert:
+    remove-violations-after: 300
+    checks:
+      - "ElytraP"
+    commands:
+      - "1:1 [alert]"
+      - "1:1 [log]"
+      - "3:0 [webhook]"
   Elytra:
     remove-violations-after: 300
     checks:
@@ -297,6 +320,8 @@ Punishments:
       - "!ElytraJ"
       - "!ElytraL"
       - "!ElytraM"
+      - "!ElytraO"
+      - "!ElytraP"
     commands:
       - "10:5 [alert]"
       - "10:5 [log]"
