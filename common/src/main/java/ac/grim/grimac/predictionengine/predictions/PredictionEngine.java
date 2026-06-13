@@ -663,6 +663,8 @@ public class PredictionEngine {
             // Window residual for tick-skip; capped so stale window can't unlock full KB burst
             EntityPushSimulator.PushRange push = player.uncertaintyHandler.pushRange;
             double residual = Math.min(avgColliding * 0.08, 0.025);
+            // floor at the vanilla per-axis push cap when a pushable entity was recently near (lag-comp overlap misses at high ping)
+            if (player.uncertaintyHandler.lastPushableNear.hasOccurredSince(3)) residual = Math.max(residual, 0.05);
             Vector3dm minNoPush = min.clone();
             minNoPush.setX(minNoPush.getX() + Math.min(push.minX, -residual));
             minNoPush.setZ(minNoPush.getZ() + Math.min(push.minZ, -residual));

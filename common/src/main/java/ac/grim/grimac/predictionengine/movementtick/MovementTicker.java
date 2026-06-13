@@ -59,12 +59,20 @@ public class MovementTicker {
             SimpleCollisionBox playerBox = GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.lastX, player.lastY, player.lastZ, 0.6f, 1.8f);
             playerBox.encompass(GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.x, player.y, player.z, 0.6f, 1.8f).expand(player.getMovementThreshold()));
             playerBox.expand(0.2);
+            // Lag-comp-widened probe: remember when a pushable entity was plausibly near (push-FP fix).
+            final SimpleCollisionBox playerBoxWide = playerBox.copy().expand(0.3);
 
             final TeamHandler teamHandler = player.checkManager.getPacketCheck(TeamHandler.class);
             final EntityTeam playerTeam = teamHandler != null ? teamHandler.getPlayerTeam() : null;
             for (PacketEntity entity : player.compensatedEntities.entityMap.values()) {
                 // TODO actually handle entity collisions instead of this awfulness
                 SimpleCollisionBox entityBox = entity.getPossibleCollisionBoxes();
+
+                if (entity.isPushable() && playerBoxWide.isCollided(entityBox)
+                        && (!serverSupported || EntityPredicates.canBePushedBy(teamHandler != null ? teamHandler.getEntityTeam(entity) : null, playerTeam))) {
+                    player.uncertaintyHandler.lastPushableNear.reset();
+                }
+
                 if (!playerBox.isCollided(entityBox)) continue;
 
                 possibleRiptideEntities++;
