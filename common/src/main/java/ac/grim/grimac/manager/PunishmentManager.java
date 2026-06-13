@@ -6,6 +6,7 @@ import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.api.config.ConfigReloadable;
 import ac.grim.grimac.api.event.events.CommandExecuteEvent;
 import ac.grim.grimac.checks.Check;
+import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.events.packets.ProxyAlertMessenger;
 import ac.grim.grimac.platform.api.player.PlatformPlayer;
 import ac.grim.grimac.player.GrimPlayer;
@@ -19,6 +20,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 public class PunishmentManager implements ConfigReloadable {
     private final GrimPlayer player;
@@ -116,6 +118,11 @@ public class PunishmentManager implements ConfigReloadable {
     }
 
     public boolean handleAlert(GrimPlayer player, String verbose, Check check) {
+        String value = verbose == null ? "" : verbose;
+        return handleAlert(player, () -> value, check);
+    }
+
+    public boolean handleAlert(GrimPlayer player, Supplier<String> verbose, Check check) {
         boolean sentDebug = false;
 
         // Check commands
@@ -124,30 +131,40 @@ public class PunishmentManager implements ConfigReloadable {
                 final int vl = getViolations(group, check);
                 final int violationCount = group.violations.size();
                 for (ParsedCommand command : group.commands) {
-                    String cmd = replaceAlertPlaceholders(command.command, vl, check, verbose);
-
                     @Nullable Set<@Nullable PlatformPlayer> verboseListeners = null;
-
-                    // Verbose that prints all flags
-                    if (GrimAPI.INSTANCE.getAlertManager().hasVerboseListeners() && command.command.equals("[alert]")) {
+                    // Verbose that prints all flags: /grim verbose subscribers get EVERY flag, not just thresholded
+                    // alerts. The verbose string is only rendered (safeGet) when there are listeners, so the flag
+                    // path stays lazy when nobody is subscribed.
+                    if (command.command.equals("[alert]") && GrimAPI.INSTANCE.getAlertManager().hasVerboseListeners()) {
                         sentDebug = true;
-                        Component component = MessageUtil.miniMessage(cmd);
-                        verboseListeners = GrimAPI.INSTANCE.getAlertManager().sendVerbose(component, null, player.user.getName());
+                        String verboseForListeners = safeGet(verbose);
+                        String listenerCmd = replaceAlertPlaceholders(command.command, vl, check, verboseForListeners);
+                        verboseListeners = GrimAPI.INSTANCE.getAlertManager().sendVerbose(MessageUtil.miniMessage(listenerCmd), null, player.user.getName());
                     }
-
                     if (violationCount >= command.threshold) {
-                        // 0 means execute once
-                        // Any other number means execute every X interval
-                        boolean inInterval = command.interval == 0 ? (command.executeCount == 0) : (violationCount % command.interval == 0);
-                        if (inInterval) {
-                            if (COMMAND_CHANNEL.fire(player, check, verbose, cmd)) continue;
+                        boolean shouldRun = command.interval == 0
+                                ? command.executeCount == 0
+                                : violationCount >= command.nextBoundary;
+                        if (shouldRun) {
+                            String renderedVerbose = safeGet(verbose);
+                            String cmd = replaceAlertPlaceholders(command.command, vl, check, renderedVerbose);
+                            boolean canceled = COMMAND_CHANNEL.fire(player, check, renderedVerbose, cmd);
+                            if (command.interval == 0) {
+                                command.executeCount++;
+                            } else {
+                                advanceBoundary(command, violationCount);
+                            }
+                            if (canceled) continue;
 
                             switch (command.command) {
-                                case "[webhook]" -> GrimAPI.INSTANCE.getDiscordManager().sendAlert(player, verbose, check.getDisplayName(), vl);
+                                case "[webhook]" -> GrimAPI.INSTANCE.getDiscordManager().sendAlert(player, renderedVerbose, check.getDisplayName(), vl);
                                 case "[log]" -> {
-                                    String verboseWithoutGl = verbose.replaceAll(" /gl .*", "");
-                                    GrimAPI.INSTANCE.getDataStoreLifecycle().liveWriteHooks()
-                                            .recordFlagFromCheck(player, check, vl, verboseWithoutGl);
+                                    // Binary-verbose checks store from flag(VerboseBuf); avoid an extra legacy text row.
+                                    if (!usesStructuredVerbose(check)) {
+                                        String verboseWithoutGl = renderedVerbose.replaceAll(" /gl .*", "");
+                                        GrimAPI.INSTANCE.getDataStoreLifecycle().liveWriteHooks()
+                                                .recordFlagFromCheck(player, check, vl, verboseWithoutGl);
+                                    }
                                 }
                                 case "[proxy]" -> ProxyAlertMessenger.sendPluginMessage(cmd);
                                 case "[alert]" -> {
@@ -170,13 +187,35 @@ public class PunishmentManager implements ConfigReloadable {
                             }
                         }
 
-                        command.executeCount++;
+                        if (command.interval > 0) command.executeCount++;
+                    } else {
+                        // Interval commands re-arm after the active rolling count
+                        // cools below their threshold.
+                        command.nextBoundary = command.threshold;
                     }
                 }
             }
         }
 
         return sentDebug;
+    }
+
+    private static String safeGet(Supplier<String> supplier) {
+        try {
+            String value = supplier.get();
+            return value == null ? "" : value;
+        } catch (Throwable ignored) {
+            return "";
+        }
+    }
+
+    private static boolean usesStructuredVerbose(Check check) {
+        CheckData data = check.getClass().getAnnotation(CheckData.class);
+        return data != null && data.verboseVersion() >= 1;
+    }
+
+    private static void advanceBoundary(ParsedCommand command, int violationCount) {
+        command.nextBoundary += ((violationCount - command.nextBoundary) / command.interval + 1) * command.interval;
     }
 
     public void handleViolation(Check check) {
@@ -208,10 +247,19 @@ class PunishGroup {
     public final int removeViolationsAfter; // time to remove violations after in milliseconds
 }
 
-@RequiredArgsConstructor
 class ParsedCommand {
     public final int threshold;
     public final int interval;
     public final String command;
+    // Legacy M=0 gate: execute once for this loaded command state.
     public int executeCount;
+    // For M>0, the next active violation count that should run this command.
+    public int nextBoundary;
+
+    public ParsedCommand(int threshold, int interval, String command) {
+        this.threshold = threshold;
+        this.interval = interval;
+        this.command = command;
+        this.nextBoundary = threshold;
+    }
 }

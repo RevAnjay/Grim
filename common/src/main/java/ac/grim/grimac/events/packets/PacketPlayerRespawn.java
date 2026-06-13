@@ -1,10 +1,7 @@
 package ac.grim.grimac.events.packets;
 
 import ac.grim.grimac.GrimAPI;
-import ac.grim.grimac.checks.impl.badpackets.BadPacketsE;
-import ac.grim.grimac.checks.impl.badpackets.BadPacketsF;
-import ac.grim.grimac.checks.impl.badpackets.BadPacketsG;
-import ac.grim.grimac.checks.impl.badpackets.BadPacketsH;
+import ac.grim.grimac.checks.impl.badpackets.*;
 import ac.grim.grimac.checks.impl.elytra.ElytraC;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.data.KnownInput;
@@ -26,7 +23,6 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerJo
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerRespawn;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUpdateHealth;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -106,6 +102,7 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
                 player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
                     player.compensatedEntities.self.isDead = true;
                     player.hasRotatedSinceSpawn = false;
+                    player.checkManager.getPreViaPacketCheck(BadPacketsM.class).onDeath();
                 });
             } else {
                 player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get() + 1, () -> player.compensatedEntities.self.isDead = false);
@@ -124,6 +121,11 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
             player.dimensionType = joinGame.getDimensionType();
             player.worldName = joinGame.getWorldName();
 
+            if (player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_15)
+                    && event.getServerVersion().isNewerThanOrEquals(ServerVersion.V_1_15)) {
+                player.packetStateData.showsDeathScreen = joinGame.isRespawnScreenEnabled();
+            }
+
             if (PacketEvents.getAPI().getServerManager().getVersion().isOlderThan(ServerVersion.V_1_17))
                 return;
             player.compensatedWorld.setDimension(joinGame.getDimensionType(), event.getUser());
@@ -135,8 +137,8 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
             GrimPlayer player = GrimAPI.INSTANCE.getPlayerDataManager().getPlayer(event.getUser());
             if (player == null) return;
 
-            List<Runnable> tasks = event.getTasksAfterSend();
-            tasks.add(player::sendTransaction);
+            player.sendTransaction();
+            event.getTasksAfterSend().add(player::sendTransaction);
 
             // Force the player to accept a teleport before respawning
             // (We won't process movements until they accept a teleport, we won't let movements though either)
@@ -149,7 +151,9 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
                 player.compensatedEntities.serverPositionsMap.clear();
             }
 
-            player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get() + 1, () -> {
+            player.addRealTimeTaskNow(player.cameraEntity::reset);
+
+            player.addRealTimeTaskNext(() -> {
                 // From 1.16 to 1.19, this doesn't get set to false for whatever reason
                 if (player.getClientVersion().isOlderThan(ClientVersion.V_1_16) || player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_20)) {
                     player.isSneaking = false;
@@ -163,6 +167,8 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
                 player.packetStateData.packetPlayerOnGround = false; // If somewhere else pulls last ground to fix other issues
                 player.packetStateData.lastClaimedPosition = new Vector3d();
                 player.filterMojangStupidityOnMojangStupidity = new Vector3d();
+
+                player.checkManager.getPreViaPacketCheck(BadPacketsM.class).onRespawn();
 
                 final boolean keepTrackedData = this.hasFlag(respawn, KEEP_TRACKED_DATA);
 
@@ -184,11 +190,11 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
                 }
 
                 player.checkManager.getPacketCheck(BadPacketsE.class).handleRespawn(); // Reminder ticks reset
-                player.checkManager.getPacketCheck(BadPacketsG.class).handleRespawn();
+                player.checkManager.getPreViaPacketCheck(BadPacketsG.class).handleRespawn();
 
                 // compensate for immediate respawn gamerule
                 if (player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_15)) {
-                    player.checkManager.getPacketCheck(BadPacketsF.class).exemptNext = true;
+                    player.checkManager.getPreViaPacketCheck(BadPacketsF.class).exemptNext = true;
                 }
 
                 // EVERYTHING gets reset on a cross dimensional teleport, clear chunks and entities!
@@ -207,16 +213,20 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
                 player.compensatedEntities.self = new PacketEntitySelf(player, player.compensatedEntities.self);
                 player.compensatedEntities.selfTrackedEntity = new TrackerData(0, 0, 0, 0, 0, EntityTypes.PLAYER, player.lastTransactionSent.get());
 
+                player.cameraEntity.reset();
+
                 if (player.getClientVersion().isOlderThan(ClientVersion.V_1_14)) { // 1.14+ players send a packet for this, listen for it instead
                     player.isSprinting = false;
                     player.vehicleData.camelSprintingState = SprintingState.STOPPED;
-                    player.checkManager.getPacketCheck(BadPacketsF.class).lastSprinting = false; // Pre 1.14 clients set this to false when creating new entity
+                    player.checkManager.getPreViaPacketCheck(BadPacketsF.class).lastSprinting = false; // Pre 1.14 clients set this to false when creating new entity
                     // TODO: What the fuck viaversion, why do you throw out keep all metadata?
                     // The server doesn't even use it... what do we do?
                     player.compensatedEntities.hasSprintingAttributeEnabled = false;
                 }
                 player.pose = Pose.STANDING;
-                player.clientVelocity = new Vector3dm();
+                if (!keepTrackedData || player.getClientVersion().isOlderThan(ClientVersion.V_1_21_2)) {
+                    player.clientVelocity = new Vector3dm();
+                }
                 if (!GrimAPI.INSTANCE.getSpectateManager().isSpectating(player.uuid)) {
                     player.gamemode = respawn.getGameMode();
                 }

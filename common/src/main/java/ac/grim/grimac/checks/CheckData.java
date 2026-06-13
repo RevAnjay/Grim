@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface CheckData {
-    String name() default "UNKNOWN";
+    String name();
 
     String alternativeName() default "UNKNOWN";
 
@@ -23,6 +23,12 @@ public @interface CheckData {
      * {@code StableKeyMapping} during rollout and log a warning.
      */
     String stableKey() default "";
+
+    /**
+     * Binary verbose schema version. Zero means the check still writes
+     * legacy text verbose only.
+     */
+    int verboseVersion() default 0;
 
     double decay() default 0.05;
 

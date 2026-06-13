@@ -42,7 +42,7 @@ public class BehaviorE extends Check implements PacketCheck {
 
         if (playersOnly) {
             PacketEntity entity = player.compensatedEntities.entityMap.get(action.getEntityId());
-            if (entity == null || entity.type != EntityTypes.PLAYER) return;
+            if (entity == null || entity.getType() != EntityTypes.PLAYER) return;
         }
 
         if (player.onGround || player.packetStateData.packetPlayerOnGround) return;

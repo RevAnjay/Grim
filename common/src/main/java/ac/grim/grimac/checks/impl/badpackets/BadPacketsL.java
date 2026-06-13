@@ -1,7 +1,9 @@
 package ac.grim.grimac.checks.impl.badpackets;
 
+import ac.grim.grimac.api.storage.verbose.VerboseSchema;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
+import ac.grim.grimac.checks.impl.verbose.VerboseCodecs;
 import ac.grim.grimac.checks.type.PacketCheck;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
@@ -10,10 +12,10 @@ import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging;
 
-import java.util.Locale;
-
-@CheckData(name = "BadPacketsL", stableKey = "grim.badpackets.invalid_dig", description = "Sent impossible dig packet")
+@CheckData(name = "BadPacketsL", stableKey = "grim.badpackets.invalid_dig", verboseVersion = 2, description = "Sent impossible dig packet")
 public class BadPacketsL extends Check implements PacketCheck {
+    public static final VerboseSchema V = VerboseSchema.of(2,
+            "posXZ:vl", "posY:zz", "face:zz", "sequence:zz", "action:enum");
 
     public BadPacketsL(GrimPlayer player) {
         super(player);
@@ -27,23 +29,29 @@ public class BadPacketsL extends Check implements PacketCheck {
             if (packet.getAction() == DiggingAction.START_DIGGING || packet.getAction() == DiggingAction.FINISHED_DIGGING || packet.getAction() == DiggingAction.CANCELLED_DIGGING)
                 return;
 
-            // 1.8 and above clients always send digging packets that aren't used for digging at 0, 0, 0, facing DOWN
-            // 1.7 and below clients do the same, except use SOUTH for RELEASE_USE_ITEM
-            final int expectedFace = player.getClientVersion().isOlderThanOrEquals(ClientVersion.V_1_7_10) && packet.getAction() == DiggingAction.RELEASE_USE_ITEM
-                    ? 255 : 0;
+            // 1.8 and above clients always send digging packets that aren't used for digging at 0, 0, 0, face 0
+            // 1.7 and below clients do the same, except use face 255 for RELEASE_USE_ITEM
+            // as of https://github.com/ViaVersion/ViaRewind/commit/e7b0606e187afbccf98ef7c88d3f3af27fe11da3, ViaRewind maps the face to 0
+            // let's allow both, just to be safe
+            final boolean allowLegacyFace = player.getClientVersion().isOlderThanOrEquals(ClientVersion.V_1_7_10)
+                    && packet.getAction() == DiggingAction.RELEASE_USE_ITEM;
+            final boolean isValidFace = packet.getBlockFaceId() == 0 || allowLegacyFace && packet.getBlockFaceId() == 255;
 
-            if (packet.getBlockFaceId() != expectedFace
+            if (!isValidFace
                     || packet.getBlockPosition().getX() != 0
                     || packet.getBlockPosition().getY() != 0
                     || packet.getBlockPosition().getZ() != 0
                     || packet.getSequence() != 0
             ) {
-                if (flagAndAlert("pos="
-                        + packet.getBlockPosition().getX() + ", " + packet.getBlockPosition().getY() + ", " + packet.getBlockPosition().getZ()
-                        + ", face=" + packet.getBlockFace()
-                        + ", sequence=" + packet.getSequence()
-                        + ", action=" + packet.getAction().toString().toLowerCase(Locale.ROOT)
-                ) && shouldModifyPackets() && canCancel(packet.getAction())) {
+                int face = packet.getBlockFaceId();
+                int sequence = packet.getSequence();
+                var buf = V.write(verbose());
+                VerboseCodecs.mcBlockPos(buf, packet.getBlockPosition())
+                        .zz(face)
+                        .zz(sequence)
+                        .vi(VerboseCodecs.enumOrdinal(packet.getAction()));
+                if (flagAndAlert(buf)
+                        && shouldModifyPackets() && canCancel(packet.getAction())) {
                     event.setCancelled(true);
                     player.onPacketCancel();
                 }

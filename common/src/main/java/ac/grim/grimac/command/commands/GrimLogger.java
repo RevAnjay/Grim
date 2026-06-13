@@ -5,7 +5,7 @@ import ac.grim.grimac.checks.impl.misc.PacketLogger;
 import ac.grim.grimac.command.BuildableCommand;
 import ac.grim.grimac.command.CommandUtils;
 import ac.grim.grimac.platform.api.command.PlayerSelector;
-import ac.grim.grimac.platform.api.manager.cloud.CloudCommandAdapter;
+import ac.grim.grimac.platform.api.manager.cloud.CloudPlatformCommandArguments;
 import ac.grim.grimac.platform.api.sender.Sender;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.MessageUtil;
@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 public class GrimLogger implements BuildableCommand {
 
     @Override
-    public void register(CommandManager<Sender> commandManager, CloudCommandAdapter adapter) {
+    public void register(CommandManager<Sender> commandManager, CloudPlatformCommandArguments arguments) {
         var base = commandManager.commandBuilder("grim", "grimac").literal("logger").permission("grim.logger");
 
         commandManager.command(base
@@ -40,17 +40,17 @@ public class GrimLogger implements BuildableCommand {
 
         commandManager.command(base
                 .literal("start")
-                .required("target", adapter.singlePlayerSelectorParser())
+                .required("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handleStart));
 
         commandManager.command(base
                 .literal("stop")
-                .required("target", adapter.singlePlayerSelectorParser())
+                .required("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handleStop));
 
         commandManager.command(base
                 .literal("status")
-                .required("target", adapter.singlePlayerSelectorParser())
+                .required("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handleStatus));
     }
 

@@ -228,6 +228,18 @@ Punishments:
       - "Simulation"
       - "GroundSpoof"
       - "NoFall"
+    # Threshold:Interval Command
+    #
+    # N is the active violation count required to run the command.
+    # Active violations are counted inside the remove-violations-after window.
+    # M > 0 runs at N, then N+M, N+2M, ...
+    # M = 0 runs once when N is reached.
+    #
+    # Examples:
+    # - "100:0 kick %player% incorrect movement!"   fires once on flag 100
+    # - "100:50 say %player% is cheating"           fires on flags 100, 150, 200, ...
+    # - "5:3 [alert]"                               fires on flags 5, 8, 11, 14, ...
+    #
     commands:
       - "100:40 [alert]"
       - "1:1 [log]"

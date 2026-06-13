@@ -69,7 +69,7 @@ public class ReachInterpolationData {
     public static int getInterpolationStepsFor(PacketEntity entity) {
         if (entity.isBoat) return 10;
         if (entity.isMinecart) return 5;
-        if (entity.type == EntityTypes.SHULKER) return 1;
+        if (entity.getType() == EntityTypes.SHULKER) return 1;
         if (entity.isLivingEntity) return 3;
         return 1;
     }

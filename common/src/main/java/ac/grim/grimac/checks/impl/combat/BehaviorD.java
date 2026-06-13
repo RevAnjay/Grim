@@ -50,8 +50,8 @@ public class BehaviorD extends Check implements PacketCheck {
 
             PacketEntity entity = player.compensatedEntities.entityMap.get(interact.getEntityId());
             if (entity == null || !entity.canHit()) return;
-            if (!entity.isLivingEntity && entity.type != EntityTypes.END_CRYSTAL) return;
-            if (playersOnly && entity.type != EntityTypes.PLAYER) return;
+            if (!entity.isLivingEntity && entity.getType() != EntityTypes.END_CRYSTAL) return;
+            if (playersOnly && entity.getType() != EntityTypes.PLAYER) return;
 
             if (attackQueue.size() <= 10) {
                 attackQueue.add(interact.getEntityId());

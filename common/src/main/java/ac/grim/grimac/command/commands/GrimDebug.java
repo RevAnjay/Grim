@@ -5,7 +5,7 @@ import ac.grim.grimac.checks.debug.HitboxDebugHandler;
 import ac.grim.grimac.checks.impl.prediction.DebugHandler;
 import ac.grim.grimac.command.BuildableCommand;
 import ac.grim.grimac.platform.api.command.PlayerSelector;
-import ac.grim.grimac.platform.api.manager.cloud.CloudCommandAdapter;
+import ac.grim.grimac.platform.api.manager.cloud.CloudPlatformCommandArguments;
 import ac.grim.grimac.platform.api.sender.Sender;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.MessageUtil;
@@ -22,21 +22,21 @@ import org.jetbrains.annotations.Nullable;
 
 public class GrimDebug implements BuildableCommand {
 
-    public void register(CommandManager<Sender> commandManager, CloudCommandAdapter adapter) {
+    public void register(CommandManager<Sender> commandManager, CloudPlatformCommandArguments arguments) {
         var grim = commandManager.commandBuilder("grim", "grimac");
 
         commandManager.command(grim
                 .literal("debug")
                 .literal("start", Description.of("Start debug output"))
                 .permission("grim.debug")
-                .required("target", adapter.singlePlayerSelectorParser())
+                .required("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handleStart));
 
         commandManager.command(grim
                 .literal("debug")
                 .literal("stop", Description.of("Stop debug output"))
                 .permission("grim.debug")
-                .required("target", adapter.singlePlayerSelectorParser())
+                .required("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handleStop));
 
         commandManager.command(grim
@@ -87,33 +87,33 @@ public class GrimDebug implements BuildableCommand {
                 .literal("debug")
                 .literal("paste", Description.of("Upload debug buffer to paste.grim.ac"))
                 .permission("grim.debug")
-                .required("target", adapter.singlePlayerSelectorParser())
+                .required("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handlePaste));
 
         commandManager.command(grim
                 .literal("debug")
                 .literal("status", Description.of("Show debug status"))
                 .permission("grim.debug")
-                .required("target", adapter.singlePlayerSelectorParser())
+                .required("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handleStatus));
 
         // Legacy toggle: /grim debug [player]
         commandManager.command(grim
                 .literal("debug", Description.of("Toggle debug output"))
                 .permission("grim.debug")
-                .optional("target", adapter.singlePlayerSelectorParser())
+                .optional("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handleToggle));
 
         commandManager.command(grim
                 .literal("consoledebug", Description.of("Toggle console debug output"))
                 .permission("grim.consoledebug")
-                .required("target", adapter.singlePlayerSelectorParser())
+                .required("target", arguments.singlePlayerSelectorParser())
                 .handler(this::handleConsoleDebug));
 
         commandManager.command(grim
                 .literal("hitboxdebug", Description.of("Toggle hitbox debug"))
                 .permission("grim.hitboxdebug")
-                .optional("target", adapter.singlePlayerSelectorParser(), Description.of("Player to debug"))
+                .optional("target", arguments.singlePlayerSelectorParser(), Description.of("Player to debug"))
                 .handler(this::handleHitboxDebug));
     }
 
