@@ -60,6 +60,14 @@ public class PacketEntity extends TypedPacketEntity {
     private ReachInterpolationData oldPacketLocation;
     private ReachInterpolationData newPacketLocation;
 
+    // Per-axis per-tick displacement estimate bounding the reach interpolation box (issue #1212); see updateInterpVelEstimate.
+    public final double[] interpVelEstimate = new double[3];
+    private Vector3d lastTrackedTargetPos = null;
+    // Per-axis |jump| of a sub-64 non-relative teleport, consumed once by the next ReachInterpolationData.
+    public double[] lastTeleportJump = null;
+    private static final double SNAP_VELOCITY_SAMPLE_CAP = 8.0; // 1.9+ relative-move cap; larger deltas are teleports
+    private static final double TELEPORT_SNAP_DISTANCE = 64.0; // vanilla snaps (no lerp) at >=64 blocks on 1.21.2+
+
     private Object2IntMap<PotionType> potionsMap = null;
     public boolean trackEntityEquipment = false;
     private EnumMap<EquipmentSlot, ItemStack> equipment = null;
@@ -133,6 +141,7 @@ public class PacketEntity extends TypedPacketEntity {
     // Set the old packet location to the new one
     // Set the new packet location to the updated packet location
     public void onFirstTransaction(boolean relative, boolean hasPos, double relX, double relY, double relZ, GrimPlayer player) {
+        final Vector3d preMovePos = trackedServerPosition.getPos();
         if (hasPos) {
             if (relative) {
                 // This only matters for 1.9+ clients, but it won't hurt 1.8 clients either... align for imprecision
@@ -152,6 +161,20 @@ public class PacketEntity extends TypedPacketEntity {
                 if (player.getClientVersion().isOlderThan(ClientVersion.V_1_9)) {
                     trackedServerPosition.setPos(new Vector3d(((int) (relX * 32)) / 32d, ((int) (relY * 32)) / 32d, ((int) (relZ * 32)) / 32d));
                 }
+            }
+        }
+        if (hasPos) {
+            updateInterpVelEstimate();
+            // A sub-64 non-relative teleport still lerps over N ticks; feed the jump to the next clamp so its tail isn't clipped.
+            if (!relative) {
+                final Vector3d now = trackedServerPosition.getPos();
+                final double jx = Math.abs(now.getX() - preMovePos.getX());
+                final double jy = Math.abs(now.getY() - preMovePos.getY());
+                final double jz = Math.abs(now.getZ() - preMovePos.getZ());
+                this.lastTeleportJump = (jx < TELEPORT_SNAP_DISTANCE && jy < TELEPORT_SNAP_DISTANCE && jz < TELEPORT_SNAP_DISTANCE)
+                        ? new double[]{jx, jy, jz} : null;
+            } else {
+                this.lastTeleportJump = null;
             }
         }
         this.oldPacketLocation = newPacketLocation;
@@ -192,6 +215,29 @@ public class PacketEntity extends TypedPacketEntity {
     // Remove the possibility of the old packet location
     public void onSecondTransaction() {
         this.oldPacketLocation = null;
+    }
+
+    // Decaying rolling-max of server-position deltas; decay = lerp rate (N-1)/N so it tracks the interp lag tail.
+    // Teleport-magnitude deltas (>= relative-move cap) excluded so a teleport can't inflate it.
+    private void updateInterpVelEstimate() {
+        final Vector3d now = trackedServerPosition.getPos();
+        if (lastTrackedTargetPos != null) {
+            final int n = ReachInterpolationData.getInterpolationStepsFor(this);
+            final double decay = n <= 1 ? 0.0 : (n - 1.0) / n;
+            final double dx = Math.abs(now.getX() - lastTrackedTargetPos.getX());
+            final double dy = Math.abs(now.getY() - lastTrackedTargetPos.getY());
+            final double dz = Math.abs(now.getZ() - lastTrackedTargetPos.getZ());
+            double ex = interpVelEstimate[0] * decay;
+            double ey = interpVelEstimate[1] * decay;
+            double ez = interpVelEstimate[2] * decay;
+            if (dx < SNAP_VELOCITY_SAMPLE_CAP) ex = Math.max(ex, dx);
+            if (dy < SNAP_VELOCITY_SAMPLE_CAP) ey = Math.max(ey, dy);
+            if (dz < SNAP_VELOCITY_SAMPLE_CAP) ez = Math.max(ez, dz);
+            interpVelEstimate[0] = ex;
+            interpVelEstimate[1] = ey;
+            interpVelEstimate[2] = ez;
+        }
+        lastTrackedTargetPos = now;
     }
 
     // If the old and new packet location are split, we need to combine bounding boxes

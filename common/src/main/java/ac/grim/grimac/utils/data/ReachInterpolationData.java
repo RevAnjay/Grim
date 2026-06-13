@@ -37,6 +37,10 @@ public class ReachInterpolationData {
     private int interpolationStepsHighBound = 0;
     private int interpolationSteps = 1;
     private boolean expandNonRelative = false;
+    // Clamp half-width bounding the startingLocation union vs unbounded growth under unreliable ticking (issue #1212).
+    private double maxOffsetX, maxOffsetY, maxOffsetZ;
+    private boolean hasMaxOffset = false;
+    private boolean teleportActive = false;
 
     public ReachInterpolationData(GrimPlayer player, SimpleCollisionBox startingLocation, TrackedPosition position, PacketEntity entity) {
         final boolean unreliableTicking = !player.inVehicle() && player.canSkipTicks();
@@ -53,20 +57,21 @@ public class ReachInterpolationData {
             targetLocation.expand(0.03125);
         }
 
-        if (entity.isBoat) {
-            interpolationSteps = 10;
-        } else if (entity.isMinecart) {
-            interpolationSteps = 5;
-        } else if (entity.type == EntityTypes.SHULKER) {
-            interpolationSteps = 1;
-        } else if (entity.isLivingEntity) {
-            interpolationSteps = 3;
-        } else {
-            interpolationSteps = 1;
-        }
+        interpolationSteps = getInterpolationStepsFor(entity);
 
         // If the player doesn't tick reliably, their interpolation is anywhere between min and max steps.
         if (unreliableTicking) interpolationStepsHighBound = getInterpolationSteps();
+
+        buildMaxOffset();
+        clampStartToTarget();
+    }
+
+    public static int getInterpolationStepsFor(PacketEntity entity) {
+        if (entity.isBoat) return 10;
+        if (entity.isMinecart) return 5;
+        if (entity.type == EntityTypes.SHULKER) return 1;
+        if (entity.isLivingEntity) return 3;
+        return 1;
     }
 
     // While riding entities, there is no interpolation.
@@ -86,6 +91,77 @@ public class ReachInterpolationData {
         double maxZ = Math.max(one.maxZ, two.maxZ);
 
         return new SimpleCollisionBox(minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    // Clamp half-width = interpolationSteps * per-tick velocity estimate (+1 step for 1.21.5+ velocity drift) + jitter.
+    // The estimate decays at the lerp rate (N-1)/N so steps*v tracks the vanilla render-lag tail; safety is a small cushion.
+    private void buildMaxOffset() {
+        final int mult = interpolationSteps + (player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_21_5) ? 1 : 0);
+        final double vx = Math.max(entity.interpVelEstimate[0], 0.05);
+        final double vy = Math.max(entity.interpVelEstimate[1], 0.08);
+        final double vz = Math.max(entity.interpVelEstimate[2], 0.05);
+
+        final boolean legacy = player.getClientVersion().isOlderThan(ClientVersion.V_1_9)
+                && PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_9);
+        final double jx = legacy ? 0.03125 : 1e-3;
+        final double jy = legacy ? 0.015625 : 1e-3;
+        final double jz = jx;
+
+        final double safety = 1.1;
+        double ox = mult * vx * safety + jx;
+        double oy = mult * vy * safety + jy;
+        double oz = mult * vz * safety + jz;
+
+        // sub-64 teleport still lerps; cover the full jump for one tick so the lerp tail isn't clipped
+        final double[] tp = entity.lastTeleportJump;
+        if (tp != null) {
+            ox = Math.max(ox, tp[0] + jx);
+            oy = Math.max(oy, tp[1] + jy);
+            oz = Math.max(oz, tp[2] + jz);
+            teleportActive = true;
+        }
+        entity.lastTeleportJump = null; // one-shot
+
+        this.maxOffsetX = ox;
+        this.maxOffsetY = oy;
+        this.maxOffsetZ = oz;
+        this.hasMaxOffset = true;
+    }
+
+    // Intersect startingLocation into target +/- maxOffset (kills the unbounded union; no-op when reliable).
+    // No bbox term - getPossibleHitboxCombined adds entity dimensions downstream. Mutates in place (hot path).
+    private void clampStartToTarget() {
+        if (!hasMaxOffset) return; // no-interp 3-arg ctor (riding/freeze)
+
+        final SimpleCollisionBox s = startingLocation;
+        final double tx = (targetLocation.minX + targetLocation.maxX) * 0.5;
+        final double ty = (targetLocation.minY + targetLocation.maxY) * 0.5;
+        final double tz = (targetLocation.minZ + targetLocation.maxZ) * 0.5;
+        final double loX = tx - maxOffsetX, hiX = tx + maxOffsetX;
+        final double loY = ty - maxOffsetY, hiY = ty + maxOffsetY;
+        final double loZ = tz - maxOffsetZ, hiZ = tz + maxOffsetZ;
+
+        if (s.minX >= loX && s.maxX <= hiX && s.minY >= loY && s.maxY <= hiY && s.minZ >= loZ && s.maxZ <= hiZ) {
+            return;
+        }
+
+        double nMinX = Math.max(s.minX, loX), nMaxX = Math.min(s.maxX, hiX);
+        double nMinY = Math.max(s.minY, loY), nMaxY = Math.min(s.maxY, hiY);
+        double nMinZ = Math.max(s.minZ, loZ), nMaxZ = Math.min(s.maxZ, hiZ);
+
+        if (!teleportActive) {
+            // inverted = start outside the window (>=64 snap / runaway): collapse to target
+            if (nMinX > nMaxX) nMinX = nMaxX = tx;
+            if (nMinY > nMaxY) nMinY = nMaxY = ty;
+            if (nMinZ > nMaxZ) nMinZ = nMaxZ = tz;
+        } else {
+            if (nMinX > nMaxX) { nMinX = s.minX; nMaxX = s.maxX; }
+            if (nMinY > nMaxY) { nMinY = s.minY; nMaxY = s.maxY; }
+            if (nMinZ > nMaxZ) { nMinZ = s.minZ; nMaxZ = s.maxZ; }
+        }
+
+        s.minX = nMinX; s.minY = nMinY; s.minZ = nMinZ;
+        s.maxX = nMaxX; s.maxY = nMaxY; s.maxZ = nMaxZ;
     }
 
     public static CollisionBox getOverlapHitbox(CollisionBox b1, CollisionBox b2) {
@@ -140,9 +216,6 @@ public class ReachInterpolationData {
     public SimpleCollisionBox getPossibleLocationCombined() {
         int interpSteps = getInterpolationSteps();
 
-//        int interpolationStepsLowBound = Math.min(this.interpolationStepsLowBound, this.cancelledLerpInterpolationStepsLowBound); // Temp test
-
-
         double stepMinX = (targetLocation.minX - startingLocation.minX) / (double) interpSteps;
         double stepMaxX = (targetLocation.maxX - startingLocation.maxX) / (double) interpSteps;
         double stepMinY = (targetLocation.minY - startingLocation.minY) / (double) interpSteps;
@@ -150,25 +223,28 @@ public class ReachInterpolationData {
         double stepMinZ = (targetLocation.minZ - startingLocation.minZ) / (double) interpSteps;
         double stepMaxZ = (targetLocation.maxZ - startingLocation.maxZ) / (double) interpSteps;
 
-        SimpleCollisionBox minimumInterpLocation = new SimpleCollisionBox(
-                startingLocation.minX + (interpolationStepsLowBound * stepMinX),
-                startingLocation.minY + (interpolationStepsLowBound * stepMinY),
-                startingLocation.minZ + (interpolationStepsLowBound * stepMinZ),
-                startingLocation.maxX + (interpolationStepsLowBound * stepMaxX),
-                startingLocation.maxY + (interpolationStepsLowBound * stepMaxY),
-                startingLocation.maxZ + (interpolationStepsLowBound * stepMaxZ));
+        // Each corner is linear in step, so the union over [low, high] equals the union of just the endpoints (O(1)).
+        double loMinX = startingLocation.minX + interpolationStepsLowBound * stepMinX;
+        double loMinY = startingLocation.minY + interpolationStepsLowBound * stepMinY;
+        double loMinZ = startingLocation.minZ + interpolationStepsLowBound * stepMinZ;
+        double loMaxX = startingLocation.maxX + interpolationStepsLowBound * stepMaxX;
+        double loMaxY = startingLocation.maxY + interpolationStepsLowBound * stepMaxY;
+        double loMaxZ = startingLocation.maxZ + interpolationStepsLowBound * stepMaxZ;
 
-        for (int step = interpolationStepsLowBound + 1; step <= interpolationStepsHighBound; step++) {
-            minimumInterpLocation = combineCollisionBox(minimumInterpLocation, new SimpleCollisionBox(
-                    startingLocation.minX + (step * stepMinX),
-                    startingLocation.minY + (step * stepMinY),
-                    startingLocation.minZ + (step * stepMinZ),
-                    startingLocation.maxX + (step * stepMaxX),
-                    startingLocation.maxY + (step * stepMaxY),
-                    startingLocation.maxZ + (step * stepMaxZ)));
-        }
+        double hiMinX = startingLocation.minX + interpolationStepsHighBound * stepMinX;
+        double hiMinY = startingLocation.minY + interpolationStepsHighBound * stepMinY;
+        double hiMinZ = startingLocation.minZ + interpolationStepsHighBound * stepMinZ;
+        double hiMaxX = startingLocation.maxX + interpolationStepsHighBound * stepMaxX;
+        double hiMaxY = startingLocation.maxY + interpolationStepsHighBound * stepMaxY;
+        double hiMaxZ = startingLocation.maxZ + interpolationStepsHighBound * stepMaxZ;
 
-        return minimumInterpLocation;
+        return new SimpleCollisionBox(
+                Math.min(loMinX, hiMinX),
+                Math.min(loMinY, hiMinY),
+                Math.min(loMinZ, hiMinZ),
+                Math.max(loMaxX, hiMaxX),
+                Math.max(loMaxY, hiMaxY),
+                Math.max(loMaxZ, hiMaxZ));
     }
 
     /**
@@ -330,6 +406,7 @@ public class ReachInterpolationData {
     public void updatePossibleStartingLocation(SimpleCollisionBox possibleLocationCombined) {
         //GrimACBukkitLoaderPlugin.staticGetLogger().info(ChatColor.BLUE + "Updated new starting location as second trans hasn't arrived " + startingLocation);
         this.startingLocation = combineCollisionBox(startingLocation, possibleLocationCombined);
+        clampStartToTarget(); // re-bound the per-tick union so it can't accumulate without limit (issue #1212)
         //GrimACBukkitLoaderPlugin.staticGetLogger().info(ChatColor.BLUE + "Finished updating new starting location as second trans hasn't arrived " + startingLocation);
     }
 
