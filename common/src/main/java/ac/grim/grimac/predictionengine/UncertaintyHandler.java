@@ -74,7 +74,8 @@ public class UncertaintyHandler {
     // Fishing rod pulling is another method of adding to a player's velocity
     public final List<Integer> fishingRodPulls = new ArrayList<>();
     public SimpleCollisionBox fireworksBox = null;
-    public double fireworkResidualCap = 0.05;
+    public double fireworkResidualCap = 0.008;
+    public double fireworkResidualFloor = 0.003;
     public SimpleCollisionBox fishingRodPullBox = null;
 
     public final LastInstance lastFlyingTicks;
@@ -93,6 +94,8 @@ public class UncertaintyHandler {
     public final LastInstance lastVehicleSwitch;
     public final LastInstance lastGlidingChange;
     public final LastInstance lastShulkerBoxNearby;
+    public final LastInstance lastPushableNear;
+    public final LastInstance lastTouchingWater;
     public double lastHorizontalOffset = 0;
     public double lastVerticalOffset = 0;
     public EntityPushSimulator.PushRange pushRange = new EntityPushSimulator.PushRange();
@@ -115,6 +118,8 @@ public class UncertaintyHandler {
         this.lastVehicleSwitch = new LastInstance(player);
         this.lastGlidingChange = new LastInstance(player);
         this.lastShulkerBoxNearby = new LastInstance(player);
+        this.lastPushableNear = new LastInstance(player);
+        this.lastTouchingWater = new LastInstance(player);
         tick();
 
         this.riptideEntities.add(0);
@@ -178,32 +183,28 @@ public class UncertaintyHandler {
 
         fishingRodPulls.clear();
 
+        if (player.wasTouchingWater) lastTouchingWater.reset();
+
         int maxFireworks = player.fireworks.getMaxFireworksAppliedPossible();
         if (maxFireworks <= 0 || (!player.isGliding && !player.wasGliding)) {
             return;
         }
+        int magnitudeFireworks = player.fireworks.getMaxFireworksForMagnitude();
 
         Vector3dm currentLook = ReachUtils.getLook(player, player.yaw, player.pitch);
         Vector3dm lastLook = ReachUtils.getLook(player, player.lastYaw, player.lastPitch);
 
-        if (player.wasTouchingWater) {
-            double totalBoost = 0.85 * maxFireworks;
-            fireworksBox = new SimpleCollisionBox(
-                -totalBoost, -totalBoost, -totalBoost,
-                 totalBoost,  totalBoost,  totalBoost
-            );
-        } else {
-            double residualX = Math.min(fireworkResidualCap, Math.max(0.01,
-                0.5 * Math.abs(currentLook.getX() - lastLook.getX()) * 0.85 * maxFireworks));
-            double residualY = Math.min(fireworkResidualCap, Math.max(0.01,
-                0.5 * Math.abs(currentLook.getY() - lastLook.getY()) * 0.85 * maxFireworks));
-            double residualZ = Math.min(fireworkResidualCap, Math.max(0.01,
-                0.5 * Math.abs(currentLook.getZ() - lastLook.getZ()) * 0.85 * maxFireworks));
-            fireworksBox = new SimpleCollisionBox(
-                -residualX, -residualY, -residualZ,
-                 residualX,  residualY,  residualZ
-            );
-        }
+        // Boost is modeled in the prediction candidates (air + water); this box is only the look-bridge tolerance.
+        double residualX = Math.min(fireworkResidualCap, Math.max(fireworkResidualFloor,
+            0.5 * Math.abs(currentLook.getX() - lastLook.getX()) * 0.85 * magnitudeFireworks));
+        double residualY = Math.min(fireworkResidualCap, Math.max(fireworkResidualFloor,
+            0.5 * Math.abs(currentLook.getY() - lastLook.getY()) * 0.85 * magnitudeFireworks));
+        double residualZ = Math.min(fireworkResidualCap, Math.max(fireworkResidualFloor,
+            0.5 * Math.abs(currentLook.getZ() - lastLook.getZ()) * 0.85 * magnitudeFireworks));
+        fireworksBox = new SimpleCollisionBox(
+            -residualX, -residualY, -residualZ,
+             residualX,  residualY,  residualZ
+        );
     }
 
     public double getOffsetHorizontal(VectorData data) {
@@ -301,7 +302,9 @@ public class UncertaintyHandler {
             offset -= isElytraFlight ? 0.3 : 1.2;
         }
 
-        if (player.wasTouchingWater && (player.isGliding || player.wasGliding)
+        // Keep the water firework leniency for a few ticks AFTER leaving water: the up/down-through-water
+        // crossing has a ~0.02 water<->air terminal gap the shrunk residual box no longer covers on the air side.
+        if (player.uncertaintyHandler.lastTouchingWater.hasOccurredSince(3) && (player.isGliding || player.wasGliding)
                 && player.fireworks.getMaxFireworksAppliedPossible() > 0) {
             offset -= 0.05;
         }

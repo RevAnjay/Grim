@@ -67,7 +67,7 @@ public class ElytraM extends Check implements PostPredictionCheck {
         double expectedDeltaY = lastDeltaY * 0.98;
 
         int fireworks = player.fireworks.getMaxFireworksAppliedPossible();
-        double fireworkAllowance = fireworks * FIREWORK_DELTA_PER_ROCKET;
+        double fireworkAllowance = player.fireworks.getMaxFireworksForMagnitude() * FIREWORK_DELTA_PER_ROCKET;
 
         double speedFactor = Math.max(deltaXZ, lastDeltaXZ);
         double maxAccelXZ = MAX_ACCEL_FACTOR * Math.max(0.1, speedFactor) + fireworkAllowance + BASE_EPSILON;

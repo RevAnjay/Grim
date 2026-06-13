@@ -43,4 +43,11 @@ public class CompensatedFireworks extends Check implements PostPredictionCheck {
     public int getMaxFireworksAppliedPossible() {
         return activeFireworks.size();
     }
+
+    // Boost saturates at 1.7*look; cap N for magnitude-scaled tolerances (residual, ElytraM allowance).
+    public static final int MAGNITUDE_FIREWORK_CAP = 4;
+
+    public int getMaxFireworksForMagnitude() {
+        return Math.min(activeFireworks.size(), MAGNITUDE_FIREWORK_CAP);
+    }
 }

@@ -51,6 +51,7 @@ public class ElytraP extends Check implements PostPredictionCheck {
                 || player.packetStateData.lastPacketWasTeleport
                 || player.predictedVelocity.isKnockback()
                 || player.predictedVelocity.isExplosion()
+                || player.packetStateData.tryingToRiptide
                 || player.compensatedEntities.getSlowFallingAmplifier().isPresent()
                 || player.compensatedEntities.getPotionLevelForPlayer(PotionTypes.LEVITATION).isPresent()
                 || player.getTransactionPing() > 500) {

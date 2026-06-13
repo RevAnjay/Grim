@@ -698,7 +698,8 @@ public class MovementCheckRunner extends Check implements PositionCheck {
         player.flyingPredictionEnabled = config.getBooleanElse("FlyingPrediction.enabled", true);
         player.flyingPredictionTolerance = config.getDoubleElse("FlyingPrediction.tolerance", 0.05);
         if (player.uncertaintyHandler != null) {
-            player.uncertaintyHandler.fireworkResidualCap = config.getDoubleElse("Simulation.firework-residual-cap", 0.05);
+            player.uncertaintyHandler.fireworkResidualCap = config.getDoubleElse("Simulation.firework-residual-cap", 0.008);
+            player.uncertaintyHandler.fireworkResidualFloor = config.getDoubleElse("Simulation.firework-residual-floor", 0.003);
         }
     }
 }

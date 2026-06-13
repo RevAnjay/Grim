@@ -12,6 +12,7 @@ import ac.grim.grimac.utils.nmsutil.ReachUtils;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class PredictionEngineWater extends PredictionEngine {
@@ -67,6 +68,27 @@ public class PredictionEngineWater extends PredictionEngine {
         this.playerGravity = playerGravity;
         this.swimmingFriction = swimmingFriction;
         super.guessBestMovement(swimmingSpeed, player);
+    }
+
+    @Override
+    public List<VectorData> applyInputsToVelocityPossibilities(GrimPlayer player, Set<VectorData> possibleVectors, float speed) {
+        // Water keeps the glide flag, so an active firework still boosts deltaMovement before water physics.
+        if ((player.isGliding || player.wasGliding) && player.fireworks.getMaxFireworksAppliedPossible() > 0) {
+            int maxRockets = PredictionEngineElytra.cappedFireworksForBoost(player);
+            Vector3dm[] looks = {ReachUtils.getLook(player, player.yaw, player.pitch), ReachUtils.getLook(player, player.lastYaw, player.lastPitch)};
+            Set<VectorData> expanded = new HashSet<>(possibleVectors);
+            for (VectorData base : possibleVectors) {
+                for (int n = 1; n <= maxRockets; n++) {
+                    for (Vector3dm look : looks) {
+                        Vector3dm boosted = base.vector.clone();
+                        for (int i = 0; i < n; i++) PredictionEngineElytra.applyFireworkBoost(boosted, look);
+                        expanded.add(base.returnNewModified(boosted, base.vectorType));
+                    }
+                }
+            }
+            possibleVectors = expanded;
+        }
+        return super.applyInputsToVelocityPossibilities(player, possibleVectors, speed);
     }
 
     @Override

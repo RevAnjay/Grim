@@ -4,8 +4,10 @@ import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.data.VectorData;
 import ac.grim.grimac.utils.math.GrimMath;
 import ac.grim.grimac.utils.math.Vector3dm;
+import ac.grim.grimac.utils.nmsutil.ReachUtils;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class PredictionEngineWaterLegacy extends PredictionEngine {
@@ -16,6 +18,27 @@ public class PredictionEngineWaterLegacy extends PredictionEngine {
         this.swimmingSpeed = swimmingSpeed;
         this.swimmingFriction = swimmingFriction;
         super.guessBestMovement(swimmingSpeed, player);
+    }
+
+    @Override
+    public List<VectorData> applyInputsToVelocityPossibilities(GrimPlayer player, Set<VectorData> possibleVectors, float speed) {
+        // Pre-1.13 firework elytra still boosts deltaMovement while gliding through water; model it before drag.
+        if ((player.isGliding || player.wasGliding) && player.fireworks.getMaxFireworksAppliedPossible() > 0) {
+            int maxRockets = PredictionEngineElytra.cappedFireworksForBoost(player);
+            Vector3dm[] looks = {ReachUtils.getLook(player, player.yaw, player.pitch), ReachUtils.getLook(player, player.lastYaw, player.lastPitch)};
+            Set<VectorData> expanded = new HashSet<>(possibleVectors);
+            for (VectorData base : possibleVectors) {
+                for (int n = 1; n <= maxRockets; n++) {
+                    for (Vector3dm look : looks) {
+                        Vector3dm boosted = base.vector.clone();
+                        for (int i = 0; i < n; i++) PredictionEngineElytra.applyFireworkBoost(boosted, look);
+                        expanded.add(base.returnNewModified(boosted, base.vectorType));
+                    }
+                }
+            }
+            possibleVectors = expanded;
+        }
+        return super.applyInputsToVelocityPossibilities(player, possibleVectors, speed);
     }
 
     // This is just the vanilla equation for legacy water movement
