@@ -1,0 +1,407 @@
+# ============================================================================
+#  checks.yml - per-check configuration
+# ----------------------------------------------------------------------------
+#  Every check is listed here. Two things you can do per check:
+#    enabled: false   -> fully turns the check off (no flag, no alert, no setback,
+#                        no packet cancellation). This is a real kill-switch.
+#    <tunables>       -> per-check thresholds, where the check exposes any.
+#
+#  Punishments (what happens when a check flags) still live in punishments.yml.
+#  A check left enabled here but absent from punishments.yml will alert but not
+#  punish, exactly as before.
+#
+#  Legacy: a handful of checks still read their tunables from config.yml
+#  (noted inline). Their 'enabled' toggle works here regardless. Settings will
+#  migrate here fully in a later version; until then config.yml stays authoritative
+#  for those values, so existing tuning is never silently overridden.
+# ============================================================================
+
+checks:
+
+  # ======== Movement prediction (core) ========
+  GroundSpoof:
+    enabled: true
+  Simulation:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: Simulation)
+  Phase:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: Phase)
+
+  # ======== Ground spoof / NoFall ========
+  NoFall:
+    enabled: true
+
+  # ======== Movement ========
+  AirStuck:
+    enabled: true   # experimental
+    # tunables for this check currently live in config.yml (section: AirStuck)
+  NoSlow:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: NoSlow)
+
+  # ======== Combat (reach, hitbox, aura behaviour) ========
+  Behavior:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: Behavior)
+  EntityPierce:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: EntityPierce)
+  FreezeAttack:
+    enabled: true   # experimental
+    # Cancel attacks that land during a detected packet freeze.
+    cancel-hits: true
+    # Setback the player on a confirmed freeze hit.
+    setback: true
+    # Transaction gap (ms) that counts as a freeze.
+    gap-threshold-ms: 1500
+    # Stronger gap (ms) weighted more heavily.
+    gap-strong-threshold-ms: 2000
+    # Freeze score at which hits get cancelled.
+    score-cancel: 3
+    # Freeze score at which the check flags.
+    score-flag: 5
+  Hitboxes:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: Hitboxes)
+  MultiInteractA:
+    enabled: true   # experimental
+  MultiInteractB:
+    enabled: true   # experimental
+  Reach:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: Reach)
+  SelfInteract:
+    enabled: true
+  Trigger:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: Trigger)
+  WallHit:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: WallHit)
+
+  # ======== Block breaking ========
+  AirLiquidBreak:
+    enabled: true
+  FarBreak:
+    enabled: true   # experimental
+  FastBreak:
+    enabled: true
+  InvalidBreak:
+    enabled: true
+  MultiBreak:
+    enabled: true   # experimental
+  NoSwingBreak:
+    enabled: true   # experimental
+  PositionBreakA:
+    enabled: true
+  PositionBreakB:
+    enabled: true
+  RotationBreak:
+    enabled: true   # experimental
+  WrongBreak:
+    enabled: true
+
+  # ======== Scaffolding / placement ========
+  AirLiquidPlace:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: AirLiquidPlace)
+  DuplicateRotPlace:
+    enabled: true   # experimental
+  FabricatedPlace:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: FabricatedPlace)
+  FarPlace:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: FarPlace)
+  InvalidPlaceA:
+    enabled: true
+  InvalidPlaceB:
+    enabled: true
+  MultiPlace:
+    enabled: true   # experimental
+  PositionPlace:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: PositionPlace)
+  RotationPlace:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: RotationPlace)
+
+  # ======== Bad packets ========
+  BadPacketsA:
+    enabled: true
+  BadPacketsB:
+    enabled: true
+  BadPacketsC:
+    enabled: true   # experimental
+  BadPacketsD:
+    enabled: true
+  BadPacketsE:
+    enabled: true
+  BadPacketsF:
+    enabled: true
+  BadPacketsG:
+    enabled: true
+  BadPacketsH:
+    enabled: true   # experimental
+  BadPacketsI:
+    enabled: true
+  BadPacketsJ:
+    enabled: true
+  BadPacketsK:
+    enabled: true
+  BadPacketsL:
+    enabled: true
+  BadPacketsM:
+    enabled: true   # experimental
+  BadPacketsN:
+    enabled: true
+  BadPacketsO:
+    enabled: true
+  BadPacketsP:
+    enabled: true   # experimental
+  BadPacketsQ:
+    enabled: true
+  BadPacketsR:
+    enabled: true   # experimental
+  BadPacketsS:
+    enabled: true
+  BadPacketsT:
+    enabled: true
+  BadPacketsU:
+    enabled: true
+  BadPacketsV:
+    enabled: true   # experimental
+  BadPacketsW:
+    enabled: true   # experimental
+  BadPacketsX:
+    enabled: true   # experimental
+  BadPacketsY:
+    enabled: true
+  BadPacketsZ:
+    enabled: true   # experimental
+
+  # ======== Packet order ========
+  PacketOrderA:
+    enabled: true   # experimental
+  PacketOrderB:
+    enabled: true
+  PacketOrderC:
+    enabled: true
+  PacketOrderD:
+    enabled: true   # experimental
+  PacketOrderE:
+    enabled: true   # experimental
+  PacketOrderF:
+    enabled: true   # experimental
+  PacketOrderG:
+    enabled: true   # experimental
+  PacketOrderH:
+    enabled: true   # experimental
+  PacketOrderI:
+    enabled: true   # experimental
+    # tunables for this check currently live in config.yml (section: PacketOrderI)
+  PacketOrderJ:
+    enabled: true   # experimental
+  PacketOrderK:
+    enabled: true   # experimental
+  PacketOrderL:
+    enabled: true   # experimental
+  PacketOrderM:
+    enabled: true   # experimental
+  PacketOrderN:
+    enabled: true   # experimental
+  PacketOrderO:
+    enabled: true   # experimental
+  PacketOrderP:
+    enabled: true   # experimental
+
+  # ======== Multi-actions ========
+  MultiActionsA:
+    enabled: true   # experimental
+  MultiActionsB:
+    enabled: true   # experimental
+  MultiActionsC:
+    enabled: true
+  MultiActionsD:
+    enabled: true
+  MultiActionsE:
+    enabled: true   # experimental
+  MultiActionsF:
+    enabled: true   # experimental
+  MultiActionsG:
+    enabled: true   # experimental
+
+  # ======== Inventory (autototem / autoswap) ========
+  AutoSwap:
+    enabled: true
+    # Verbose AutoSwapC debug output.
+    c:
+      debug: false
+  AutoTotem:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: AutoTotem)
+  InventoryA:
+    enabled: true
+  InventoryB:
+    enabled: true
+  InventoryC:
+    enabled: true
+  InventoryD:
+    enabled: true
+  InventoryE:
+    enabled: true
+  InventoryF:
+    enabled: true   # experimental
+  InventoryG:
+    enabled: true   # experimental
+
+  # ======== Timer ========
+  NegativeTimer:
+    enabled: true   # experimental
+    # tunables for this check currently live in config.yml (section: NegativeTimer)
+  TickTimer:
+    enabled: true
+  TimerA:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: TimerA)
+  TimerLimit:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: TimerLimit)
+  VehicleTimer:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: VehicleTimer)
+
+  # ======== Velocity (knockback / explosion) ========
+  Explosion:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: Explosion)
+  Knockback:
+    enabled: true
+    # tunables for this check currently live in config.yml (section: Knockback)
+
+  # ======== Vehicle ========
+  VehicleA:
+    enabled: true
+  VehicleB:
+    enabled: true
+  VehicleC:
+    enabled: true
+  VehicleD:
+    enabled: true   # experimental
+  VehicleE:
+    enabled: true   # experimental
+  VehicleF:
+    enabled: true   # experimental
+
+  # ======== Elytra ========
+  ElytraA:
+    enabled: true
+  ElytraB:
+    enabled: true
+  ElytraC:
+    enabled: true
+  ElytraD:
+    enabled: true   # experimental
+  ElytraE:
+    enabled: true   # experimental
+  ElytraF:
+    enabled: true
+  ElytraG:
+    enabled: true   # experimental
+  ElytraH:
+    enabled: true   # experimental
+  ElytraI:
+    enabled: true   # experimental
+  ElytraJ:
+    enabled: true
+  ElytraL:
+    enabled: true   # experimental
+  ElytraM:
+    enabled: true   # experimental
+  ElytraN:
+    enabled: true   # experimental
+  ElytraO:
+    enabled: true
+  ElytraP:
+    enabled: true   # experimental
+
+  # ======== Sprint ========
+  SprintA:
+    enabled: true
+  SprintB:
+    enabled: true   # experimental
+  SprintC:
+    enabled: true   # experimental
+  SprintD:
+    enabled: true   # experimental
+  SprintE:
+    enabled: true   # experimental
+  SprintF:
+    enabled: true   # experimental
+  SprintG:
+    enabled: true   # experimental
+
+  # ======== Aim ========
+  AimDuplicateLook:
+    enabled: true
+  AimModulo360:
+    enabled: true
+  AuraSnapBack:
+    enabled: true   # experimental
+    # Min yaw jump (deg) toward a target to arm the snap-back window.
+    snap-threshold: 30.0
+    # Max yaw (deg) the view may settle from its pre-snap angle to count as a return.
+    return-tolerance: 3.0
+    # Ticks the view must return within to flag.
+    return-window: 3
+
+  # ======== Chat ========
+  ChatA:
+    enabled: true   # experimental
+  ChatB:
+    enabled: true
+  ChatC:
+    enabled: true   # experimental
+    # Regex of chat lines exempt from ChatC (empty = none).
+    #exempt-regex: ""
+  ChatD:
+    enabled: true
+
+  # ======== Anti-crash ========
+  CrashA:
+    enabled: true
+  CrashB:
+    enabled: true
+  CrashC:
+    enabled: true
+  CrashD:
+    enabled: true
+  CrashE:
+    enabled: true
+  CrashF:
+    enabled: true
+  CrashG:
+    enabled: true
+  CrashH:
+    enabled: true
+  CrashI:
+    enabled: true
+
+  # ======== Exploit ========
+  ExploitA:
+    enabled: true
+  ExploitB:
+    enabled: true
+
+  # ======== Baritone ========
+  Baritone:
+    enabled: true
+
+  # ======== Misc ========
+  PacketLogger:
+    enabled: true
+  Post:
+    enabled: true
+  TransactionOrder:
+    enabled: true

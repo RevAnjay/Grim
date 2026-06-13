@@ -7,6 +7,7 @@ import ac.grim.grimac.api.event.events.FlagEvent;
 import ac.grim.grimac.api.storage.verbose.VerboseBuf;
 import ac.grim.grimac.api.storage.verbose.VerboseRenderContext;
 import ac.grim.grimac.internal.storage.verbose.VerboseRegistry;
+import ac.grim.grimac.manager.config.ChecksConfigView;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
@@ -44,6 +45,8 @@ public class Check extends GrimProcessor implements AbstractCheck {
 
     private boolean experimental;
     private boolean experimentalOverride;
+    // checks.yml kill-switch (checks.<configName>.enabled, default true). Fully gates flag() + shouldModifyPackets().
+    private boolean configEnabled = true;
     @Setter private boolean isEnabled;
 
     private boolean exemptPermission;
@@ -73,7 +76,8 @@ public class Check extends GrimProcessor implements AbstractCheck {
     }
 
     public boolean shouldModifyPackets() {
-        return isEnabled
+        return configEnabled
+                && isEnabled
                 && !player.disableGrim
                 && !player.noModifyPacketPermission
                 && !noModifyPacketPermission
@@ -128,7 +132,7 @@ public class Check extends GrimProcessor implements AbstractCheck {
     }
 
     private boolean flag(@NotNull Supplier<String> verbose) {
-        if (player.disableGrim || (experimental && !player.isExperimentalChecks() && !experimentalOverride) || exemptPermission)
+        if (!configEnabled || player.disableGrim || (experimental && !player.isExperimentalChecks() && !experimentalOverride) || exemptPermission)
             return false; // Avoid calling event if disabled
 
         if (FLAG_CHANNEL.fire(player, this, verbose)) return false;
@@ -147,7 +151,7 @@ public class Check extends GrimProcessor implements AbstractCheck {
         Supplier<String> rendered = verbose.rendered();
         byte[] verboseData = verbose.data();
 
-        if (player.disableGrim || (experimental && !player.isExperimentalChecks() && !experimentalOverride) || exemptPermission)
+        if (!configEnabled || player.disableGrim || (experimental && !player.isExperimentalChecks() && !experimentalOverride) || exemptPermission)
             return false; // Avoid calling event if disabled
 
         if (FLAG_CHANNEL.fire(player, this, rendered)) return false;
@@ -225,10 +229,13 @@ public class Check extends GrimProcessor implements AbstractCheck {
 
     @Override
     public final void reload(ConfigManager configuration) {
-        decay = configuration.getDoubleElse(configName + ".decay", decay);
-        setbackVL = configuration.getDoubleElse(configName + ".setbackvl", setbackVL);
-        displayName = configuration.getStringElse(configName + ".displayname", checkName);
-        description = configuration.getStringElse(configName + ".description", description);
+        // checks.yml owns the new keys; bare keys (config.yml) stay readable as legacy fallback.
+        final String scoped = "checks." + configName + ".";
+        configEnabled = configuration.getBooleanElse(scoped + "enabled", configuration.getBooleanElse(configName + ".enabled", true));
+        decay = configuration.getDoubleElse(scoped + "decay", configuration.getDoubleElse(configName + ".decay", decay));
+        setbackVL = configuration.getDoubleElse(scoped + "setbackvl", configuration.getDoubleElse(configName + ".setbackvl", setbackVL));
+        displayName = configuration.getStringElse(scoped + "displayname", configuration.getStringElse(configName + ".displayname", checkName));
+        description = configuration.getStringElse(scoped + "description", configuration.getStringElse(configName + ".description", description));
 
         if (experimental) {
             List<String> enabledList = configuration.getStringListElse("enabled-experimental-checks", new ArrayList<>());
@@ -237,7 +244,7 @@ public class Check extends GrimProcessor implements AbstractCheck {
         }
 
         if (setbackVL == -1) setbackVL = Double.MAX_VALUE;
-        onReload(configuration);
+        onReload(new ChecksConfigView(configuration));
     }
 
     @Override

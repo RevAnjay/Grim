@@ -67,6 +67,7 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
         if (!initialized) {
             initialized = true;
             config.addSource(GrimAPI.class, "config", getConfigFile("config.yml"));
+            config.addSource(GrimAPI.class, "checks", getConfigFile("checks.yml"));
             config.addSource(GrimAPI.class, "messages", getConfigFile("messages.yml"));
             config.addSource(GrimAPI.class, "discord", getConfigFile("discord.yml"));
             config.addSource(GrimAPI.class, "punishments", getConfigFile("punishments.yml"));
