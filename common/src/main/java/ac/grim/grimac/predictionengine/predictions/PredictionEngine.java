@@ -682,14 +682,18 @@ public class PredictionEngine {
 
         if (isElytraFlight && (player.verticalCollision || player.lastOnGround || player.onGround)
                 && player.uncertaintyHandler.fireworksBox != null) {
-            double groundBonus = Math.abs(vector.vector.getY()) * 0.15;
-            double bonus = Math.min(0.2, groundBonus);
-            minVector.setX(minVector.getX() - bonus);
-            minVector.setZ(minVector.getZ() - bonus);
-            maxVector.setX(maxVector.getX() + bonus);
-            maxVector.setZ(maxVector.getZ() + bonus);
-            if (vector.vector.getY() < 0) maxVector.setY(Math.max(maxVector.getY(), 0));
-            if (vector.vector.getY() > 0) minVector.setY(Math.min(minVector.getY(), 0));
+            // X/Z masking only when descending into ground (closes the level/rising ceiling-grind exploit);
+            // the Y collision-stop is kept for both directions (it doesn't mask horizontal speed).
+            if (vector.vector.getY() < 0) {
+                double bonus = Math.min(0.2, Math.abs(vector.vector.getY()) * 0.15);
+                minVector.setX(minVector.getX() - bonus);
+                minVector.setZ(minVector.getZ() - bonus);
+                maxVector.setX(maxVector.getX() + bonus);
+                maxVector.setZ(maxVector.getZ() + bonus);
+                maxVector.setY(Math.max(maxVector.getY(), 0));
+            } else if (vector.vector.getY() > 0) {
+                minVector.setY(Math.min(minVector.getY(), 0));
+            }
         }
 
         // Handles stuff like missing idle packet causing gravity to be missed (plus 0.03 of course)
@@ -735,14 +739,17 @@ public class PredictionEngine {
         // https://github.com/MWHunter/Grim/issues/398
         // Thank mojang for removing the idle packet resulting in this hacky mess
 
-        double levitation = player.pointThreeEstimator.positiveLevitation(maxVector.getY());
-        box.combineToMinimum(box.minX, levitation, box.minZ);
-        levitation = player.pointThreeEstimator.positiveLevitation(minVector.getY());
-        box.combineToMinimum(box.minX, levitation, box.minZ);
-        levitation = player.pointThreeEstimator.negativeLevitation(maxVector.getY());
-        box.combineToMinimum(box.minX, levitation, box.minZ);
-        levitation = player.pointThreeEstimator.negativeLevitation(minVector.getY());
-        box.combineToMinimum(box.minX, levitation, box.minZ);
+        // Vanilla doesn't apply levitation while gliding; gate like the slime/piston/shulker terms.
+        if (!isElytraFlight) {
+            double levitation = player.pointThreeEstimator.positiveLevitation(maxVector.getY());
+            box.combineToMinimum(box.minX, levitation, box.minZ);
+            levitation = player.pointThreeEstimator.positiveLevitation(minVector.getY());
+            box.combineToMinimum(box.minX, levitation, box.minZ);
+            levitation = player.pointThreeEstimator.negativeLevitation(maxVector.getY());
+            box.combineToMinimum(box.minX, levitation, box.minZ);
+            levitation = player.pointThreeEstimator.negativeLevitation(minVector.getY());
+            box.combineToMinimum(box.minX, levitation, box.minZ);
+        }
 
 
         SneakingEstimator sneaking = player.checkManager.getPostPredictionCheck(SneakingEstimator.class);
@@ -812,10 +819,12 @@ public class PredictionEngine {
         // Or the player is switching in and out of controlling a vehicle, in which friction messes it up
         //
         boolean hardEntityNearby = player.uncertaintyHandler.lastHardCollidingLerpingEntity.hasOccurredSince(3);
-        if (player.uncertaintyHandler.lastVehicleSwitch.hasOccurredSince(0) || (!isElytraFlight && hardEntityNearby) || (!isElytraFlight && player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_13) && vector.vector.getY() > 0 && vector.isZeroPointZeroThree() && !Collisions.isEmpty(player, GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.lastX, vector.vector.getY() + player.lastY + 0.6, player.lastZ, 0.6f, 1.26f)))) {
+        // Elytra flight near a hard entity must also expand toward 0,0,0, not the old expand(0.3,0.1,0.3)
+        // which opened an in-air boost (upward + horizontal).
+        if (player.uncertaintyHandler.lastVehicleSwitch.hasOccurredSince(0) || hardEntityNearby || (!isElytraFlight && player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_13) && vector.vector.getY() > 0 && vector.isZeroPointZeroThree() && !Collisions.isEmpty(player, GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.lastX, vector.vector.getY() + player.lastY + 0.6, player.lastZ, 0.6f, 1.26f)))) {
             box.expandToAbsoluteCoordinates(0, 0, 0);
-        } else if (isElytraFlight && hardEntityNearby) {
-            box.expand(0.3, 0.1, 0.3);
+            // vanilla entity soft-push: 0.05/tick horizontal, Y=0. Cover it for gliders without reopening upward boost.
+            if (isElytraFlight && hardEntityNearby) box.expand(0.05, 0, 0.05);
         }
 
 
