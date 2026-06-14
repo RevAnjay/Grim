@@ -455,7 +455,10 @@ public class MovementCheckRunner extends Check implements PositionCheck {
         }
 
         boolean couldBeStuckSpeed = Collisions.checkStuckSpeed(player, player.getMovementThreshold());
-        boolean couldLeaveStuckSpeed = player.isPointThree() && Collisions.checkStuckSpeed(player, -player.getMovementThreshold());
+        // No isPointThree() gate: on 1.18.2+ it pinned couldLeaveStuckSpeed=false, so claimingLeftStuckSpeed
+        // stayed true every in-web tick and held the 0.15 exit-leniency box open continuously (NoWeb #1786).
+        // The shrunk-probe geometry alone restores edge-only exit leniency; <1.18.2 is unchanged (gate was already true).
+        boolean couldLeaveStuckSpeed = Collisions.checkStuckSpeed(player, -player.getMovementThreshold());
         player.uncertaintyHandler.claimingLeftStuckSpeed = !player.inVehicle() && player.stuckSpeedMultiplier.getX() < 1 && !couldLeaveStuckSpeed;
 
         if (couldBeStuckSpeed) {
