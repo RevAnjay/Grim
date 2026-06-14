@@ -195,6 +195,131 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         }
     }
 
+    // grim-internal's SQLite V2 schema stores UUID ids as BLOB. A datastore created by an older grim
+    // version declared the id PRIMARY KEY column as TEXT, and SQLite cannot ALTER a PRIMARY KEY column's
+    // type, so the auto-migration silently fails and every event insert binds BLOB into a TEXT PK ->
+    // SQLITE_MISMATCH on every flag. Detect that one incompatible shape, back the file up, and let the
+    // backend recreate a fresh compatible schema. Old history stays in the .bak (recoverable via
+    // /grim history migrate). Targeted: valid V2 dbs use a BLOB/INTEGER PK and are left untouched.
+    private void backupIncompatibleSqlite(Path dataFolder, BackendConfig backendConfig) {
+        if (!(backendConfig instanceof SqliteBackendConfig sqlite)) return;
+        Path db = dataFolder.resolve(sqlite.path());
+        try {
+            if (!java.nio.file.Files.exists(db) || !sqliteHasTextPrimaryKey(db)) return;
+            long stamp = System.currentTimeMillis();
+            Path bak = db.resolveSibling(db.getFileName() + "." + stamp + ".bak");
+            java.nio.file.Files.move(db, bak);
+            // WAL/SHM siblings must move too or SQLite reattaches the old pages.
+            moveAside(db.resolveSibling(db.getFileName() + "-wal"), stamp);
+            moveAside(db.resolveSibling(db.getFileName() + "-shm"), stamp);
+            logger.warning("[grim-datastore] SQLite history schema is incompatible with this version "
+                    + "(legacy TEXT primary key vs BLOB). Backed up to " + bak.getFileName()
+                    + "; auto-migrating old history into a fresh schema...");
+            try {
+                int rows = convertLegacySqlite(bak, db);
+                logger.info("[grim-datastore] auto-migrated " + rows + " legacy history rows into the new schema");
+            } catch (Exception conv) {
+                // Fail-safe: discard the partial converted db and let the backend create a fresh one.
+                // The full old history stays intact in the .bak, recoverable via /grim history migrate.
+                try { java.nio.file.Files.deleteIfExists(db); } catch (Exception ignored) {}
+                logger.log(Level.WARNING, "[grim-datastore] auto-migration of legacy history failed; "
+                        + "starting with a fresh schema (old data preserved in " + bak.getFileName() + ")", conv);
+            }
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "[grim-datastore] could not check/back up legacy SQLite schema at " + db, e);
+        }
+    }
+
+    // Best-effort: copy every table from the backed-up legacy db into a fresh db at targetPath, rewriting
+    // any TEXT primary-key column (legacy UUID-as-string) to BLOB and converting its values to the 16-byte
+    // big-endian form grim-internal binds (SqlBindings: MSB then LSB). Non-UUID/unparseable ids and any
+    // failure abort the whole copy so a fresh schema is used instead. Returns rows migrated.
+    private int convertLegacySqlite(Path bak, Path targetPath) throws java.sql.SQLException {
+        int migrated = 0;
+        try (java.sql.Connection src = java.sql.DriverManager.getConnection("jdbc:sqlite:" + bak.toAbsolutePath());
+             java.sql.Connection dst = java.sql.DriverManager.getConnection("jdbc:sqlite:" + targetPath.toAbsolutePath())) {
+            dst.setAutoCommit(false);
+            java.util.List<String[]> tables = new ArrayList<>();
+            try (java.sql.Statement s = src.createStatement();
+                 java.sql.ResultSet rs = s.executeQuery("SELECT name, sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL AND name NOT LIKE 'sqlite_%'")) {
+                while (rs.next()) tables.add(new String[]{rs.getString(1), rs.getString(2)});
+            }
+            for (String[] t : tables) {
+                String table = t[0], createSql = t[1];
+                String pkCol = findTextPkColumn(createSql);
+                String fixedCreate = pkCol == null ? createSql
+                        : createSql.replaceFirst("(?is)(\"?" + java.util.regex.Pattern.quote(pkCol) + "\"?\\s+)TEXT\\b", "$1BLOB");
+                try (java.sql.Statement s = dst.createStatement()) { s.executeUpdate(fixedCreate); }
+                migrated += copyTableRows(src, dst, table, pkCol);
+            }
+            dst.commit();
+        }
+        return migrated;
+    }
+
+    private int copyTableRows(java.sql.Connection src, java.sql.Connection dst, String table, String pkCol) throws java.sql.SQLException {
+        String q = "\"" + table.replace("\"", "\"\"") + "\"";
+        int copied = 0;
+        try (java.sql.Statement s = src.createStatement();
+             java.sql.ResultSet rs = s.executeQuery("SELECT * FROM " + q)) {
+            int cols = rs.getMetaData().getColumnCount();
+            StringBuilder ph = new StringBuilder();
+            for (int i = 0; i < cols; i++) ph.append(i == 0 ? "?" : ",?");
+            try (java.sql.PreparedStatement ins = dst.prepareStatement("INSERT INTO " + q + " VALUES (" + ph + ")")) {
+                while (rs.next()) {
+                    for (int i = 1; i <= cols; i++) {
+                        String name = rs.getMetaData().getColumnName(i);
+                        Object v = rs.getObject(i);
+                        if (pkCol != null && name.equalsIgnoreCase(pkCol) && v instanceof String str) {
+                            ins.setBytes(i, uuidToBytes(str)); // throws if not a UUID -> aborts migration (fail-safe)
+                        } else {
+                            ins.setObject(i, v);
+                        }
+                    }
+                    ins.executeUpdate();
+                    copied++;
+                }
+            }
+        }
+        return copied;
+    }
+
+    private static byte[] uuidToBytes(String s) {
+        java.util.UUID u = java.util.UUID.fromString(s.trim());
+        return java.nio.ByteBuffer.allocate(16).putLong(u.getMostSignificantBits()).putLong(u.getLeastSignificantBits()).array();
+    }
+
+    private static String findTextPkColumn(String createSql) {
+        // Matches: <"col"|col> TEXT ... PRIMARY KEY, with the [^,()] guard keeping it to one column definition.
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?is)[(,]\\s*\"?([A-Za-z0-9_]+)\"?\\s+TEXT\\b[^,()]*\\bPRIMARY\\s+KEY")
+                .matcher(createSql);
+        return m.find() ? m.group(1) : null;
+    }
+
+    private boolean sqliteHasTextPrimaryKey(Path db) {
+        try (java.sql.Connection c = java.sql.DriverManager.getConnection("jdbc:sqlite:" + db.toAbsolutePath());
+             java.sql.Statement s = c.createStatement();
+             java.sql.ResultSet rs = s.executeQuery("SELECT sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL")) {
+            while (rs.next()) {
+                String sql = rs.getString(1);
+                // A TEXT column that is itself the PRIMARY KEY (the [^,()] stops at the column boundary).
+                if (sql != null && sql.toUpperCase(java.util.Locale.ROOT).matches("(?s).*\\bTEXT\\b[^,()]*\\bPRIMARY KEY\\b.*")) {
+                    return true;
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            logger.log(Level.WARNING, "[grim-datastore] could not inspect SQLite schema at " + db + " (leaving as-is)", e);
+        }
+        return false;
+    }
+
+    private void moveAside(Path file, long stamp) throws java.io.IOException {
+        if (java.nio.file.Files.exists(file)) {
+            java.nio.file.Files.move(file, file.resolveSibling(file.getFileName() + "." + stamp + ".bak"));
+        }
+    }
+
     private boolean buildAndStart(Path dataFolder) throws Exception {
         V2Routes.Builder routesBuilder = V2Routes.builder();
         int allFailures = 0;
@@ -203,6 +328,7 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         for (Map.Entry<String, BackendConfig> entry : config.backends().entrySet()) {
             String backendId = entry.getKey();
             BackendConfig backendConfig = entry.getValue();
+            backupIncompatibleSqlite(dataFolder, backendConfig);
             BackendV2 v2 = constructV2Direct(backendId, backendConfig);
             if (v2 == null) {
                 logger.warning("[grim-datastore] no v2 backend for id '" + backendId
