@@ -43,6 +43,8 @@ public class ElytraM extends Check implements PostPredictionCheck {
                 || player.packetStateData.tryingToRiptide
                 || player.compensatedEntities.getSlowFallingAmplifier().isPresent()
                 || BlockUtil.isPlayerInBlockType(player, StateTypes.COBWEB)
+                // berry/powder-snow + the exit recovery tail where a stuck-crushed glider re-accelerates
+                || player.uncertaintyHandler.wasAffectedByStuckSpeed()
                 || player.predictedVelocity.isKnockback()
                 || player.predictedVelocity.isExplosion()
                 || player.getTransactionPing() > 500) {

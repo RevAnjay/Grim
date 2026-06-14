@@ -31,6 +31,7 @@ public class ElytraJ extends Check implements PacketCheck {
         if (player.wasTouchingWater
                 || player.wasSwimming
                 || isInWeb()
+                || player.uncertaintyHandler.wasAffectedByStuckSpeed() // berry/powder-snow + stuck exit recovery
                 || player.onGround
                 || player.lastOnGround
                 || player.packetStateData.lastPacketWasOnePointSeventeenDuplicate

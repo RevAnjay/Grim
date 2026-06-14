@@ -41,9 +41,10 @@ public class ElytraL extends Check implements PostPredictionCheck {
                 || player.predictedVelocity.isExplosion()
                 || player.compensatedEntities.getSlowFallingAmplifier().isPresent()
                 || player.compensatedEntities.getPotionLevelForPlayer(PotionTypes.LEVITATION).isPresent()
-                || BlockUtil.isPlayerInBlockType(player, StateTypes.COBWEB)
-                || BlockUtil.isPlayerInBlockType(player, StateTypes.POWDER_SNOW)
                 || BlockUtil.isPlayerInBlockType(player, StateTypes.BUBBLE_COLUMN)
+                // Covers cobweb/berry/powder-snow entry, the stuck window, AND the ~5-tick exit recovery where
+                // a glider crushed to near-zero velocity is still re-accelerating and looks like hovering.
+                || player.uncertaintyHandler.wasAffectedByStuckSpeed()
                 || player.getTransactionPing() > 500) {
             hoverTicks = 0;
             return;
