@@ -195,29 +195,29 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         }
     }
 
-    // grim-internal's SQLite V2 schema stores UUID ids as BLOB. A datastore created by an older grim
-    // version declared the id PRIMARY KEY column as TEXT, and SQLite cannot ALTER a PRIMARY KEY column's
-    // type, so the auto-migration silently fails and every event insert binds BLOB into a TEXT PK ->
-    // SQLITE_MISMATCH on every flag. Detect that one incompatible shape, back the file up, and let the
-    // backend recreate a fresh compatible schema. Old history stays in the .bak (recoverable via
-    // /grim history migrate). Targeted: valid V2 dbs use a BLOB/INTEGER PK and are left untouched.
+    // grim-internal's V2 SQLite schema stores the grim_violations event id as a BLOB (16-byte UUID). A datastore
+    // created by an older grim declared grim_violations.id as INTEGER PRIMARY KEY AUTOINCREMENT, and SQLite cannot
+    // ALTER a primary-key column's type, so every V2 event insert binds a BLOB into the INTEGER id column ->
+    // SQLITE_MISMATCH on every flag. Detect that one incompatible shape, back the file up, rebuild grim_violations
+    // with a BLOB id (old integer ids re-encoded to 16-byte big-endian so they stay unique and ordered) and copy
+    // every other table verbatim. On any failure the .bak is kept intact and the backend starts a fresh schema.
     private void backupIncompatibleSqlite(Path dataFolder, BackendConfig backendConfig) {
         if (!(backendConfig instanceof SqliteBackendConfig sqlite)) return;
         Path db = dataFolder.resolve(sqlite.path());
         try {
-            if (!java.nio.file.Files.exists(db) || !sqliteHasTextPrimaryKey(db)) return;
+            if (!java.nio.file.Files.exists(db) || !sqliteViolationsHasIntegerId(db)) return;
             long stamp = System.currentTimeMillis();
             Path bak = db.resolveSibling(db.getFileName() + "." + stamp + ".bak");
             java.nio.file.Files.move(db, bak);
             // WAL/SHM siblings must move too or SQLite reattaches the old pages.
             moveAside(db.resolveSibling(db.getFileName() + "-wal"), stamp);
             moveAside(db.resolveSibling(db.getFileName() + "-shm"), stamp);
-            logger.warning("[grim-datastore] SQLite history schema is incompatible with this version "
-                    + "(legacy TEXT primary key vs BLOB). Backed up to " + bak.getFileName()
-                    + "; auto-migrating old history into a fresh schema...");
+            logger.warning("[grim-datastore] SQLite grim_violations schema is incompatible with this version "
+                    + "(legacy INTEGER event id vs BLOB). Backed up to " + bak.getFileName()
+                    + "; auto-migrating old history into the new schema...");
             try {
-                int rows = convertLegacySqlite(bak, db);
-                logger.info("[grim-datastore] auto-migrated " + rows + " legacy history rows into the new schema");
+                int rows = convertLegacyViolations(bak, db);
+                logger.info("[grim-datastore] auto-migrated " + rows + " legacy violation rows into the new schema");
             } catch (Exception conv) {
                 // Fail-safe: discard the partial converted db and let the backend create a fresh one.
                 // The full old history stays intact in the .bak, recoverable via /grim history migrate.
@@ -230,11 +230,11 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         }
     }
 
-    // Best-effort: copy every table from the backed-up legacy db into a fresh db at targetPath, rewriting
-    // any TEXT primary-key column (legacy UUID-as-string) to BLOB and converting its values to the 16-byte
-    // big-endian form grim-internal binds (SqlBindings: MSB then LSB). Non-UUID/unparseable ids and any
-    // failure abort the whole copy so a fresh schema is used instead. Returns rows migrated.
-    private int convertLegacySqlite(Path bak, Path targetPath) throws java.sql.SQLException {
+    // Copy every table from the backed-up legacy db into a fresh db at targetPath. grim_violations is rebuilt with
+    // a BLOB primary key and its INTEGER ids re-encoded to 16-byte big-endian (V2 reads any 16 bytes as a UUID, so
+    // the old id lands in the low 64 bits - unique and order-preserving); every other table is copied verbatim.
+    // Returns the number of violation rows migrated. Any failure propagates so the caller discards the partial db.
+    private int convertLegacyViolations(Path bak, Path targetPath) throws java.sql.SQLException {
         int migrated = 0;
         try (java.sql.Connection src = java.sql.DriverManager.getConnection("jdbc:sqlite:" + bak.toAbsolutePath());
              java.sql.Connection dst = java.sql.DriverManager.getConnection("jdbc:sqlite:" + targetPath.toAbsolutePath())) {
@@ -246,34 +246,50 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
             }
             for (String[] t : tables) {
                 String table = t[0], createSql = t[1];
-                String pkCol = findTextPkColumn(createSql);
-                String fixedCreate = pkCol == null ? createSql
-                        : createSql.replaceFirst("(?is)(\"?" + java.util.regex.Pattern.quote(pkCol) + "\"?\\s+)TEXT\\b", "$1BLOB");
+                boolean isViolations = "grim_violations".equalsIgnoreCase(table)
+                        && createSql.matches("(?is).*\\bid\\s+INTEGER\\b[^,]*\\bPRIMARY\\s+KEY\\b.*");
+                String fixedCreate = isViolations
+                        ? createSql.replaceFirst("(?is)\\bid\\s+INTEGER\\b[^,]*?\\bPRIMARY\\s+KEY\\b(\\s+AUTOINCREMENT)?", "id BLOB PRIMARY KEY")
+                        : createSql;
                 try (java.sql.Statement s = dst.createStatement()) { s.executeUpdate(fixedCreate); }
-                migrated += copyTableRows(src, dst, table, pkCol);
+                int copied = copyTableRows(src, dst, table, isViolations);
+                if (isViolations) migrated += copied;
+            }
+            // Recreate the legacy indexes (V2 also issues CREATE INDEX IF NOT EXISTS, but keeping these makes the
+            // history UI fast immediately). A failed index is non-fatal - the data is already in.
+            try (java.sql.Statement s = src.createStatement();
+                 java.sql.ResultSet rs = s.executeQuery("SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL")) {
+                while (rs.next()) {
+                    try (java.sql.Statement w = dst.createStatement()) { w.executeUpdate(rs.getString(1)); }
+                    catch (java.sql.SQLException ignored) {}
+                }
             }
             dst.commit();
         }
         return migrated;
     }
 
-    private int copyTableRows(java.sql.Connection src, java.sql.Connection dst, String table, String pkCol) throws java.sql.SQLException {
+    private int copyTableRows(java.sql.Connection src, java.sql.Connection dst, String table, boolean convertIntegerId) throws java.sql.SQLException {
         String q = "\"" + table.replace("\"", "\"\"") + "\"";
         int copied = 0;
         try (java.sql.Statement s = src.createStatement();
              java.sql.ResultSet rs = s.executeQuery("SELECT * FROM " + q)) {
             int cols = rs.getMetaData().getColumnCount();
+            int idIdx = -1;
+            if (convertIntegerId) {
+                for (int i = 1; i <= cols; i++) {
+                    if ("id".equalsIgnoreCase(rs.getMetaData().getColumnName(i))) { idIdx = i; break; }
+                }
+            }
             StringBuilder ph = new StringBuilder();
             for (int i = 0; i < cols; i++) ph.append(i == 0 ? "?" : ",?");
             try (java.sql.PreparedStatement ins = dst.prepareStatement("INSERT INTO " + q + " VALUES (" + ph + ")")) {
                 while (rs.next()) {
                     for (int i = 1; i <= cols; i++) {
-                        String name = rs.getMetaData().getColumnName(i);
-                        Object v = rs.getObject(i);
-                        if (pkCol != null && name.equalsIgnoreCase(pkCol) && v instanceof String str) {
-                            ins.setBytes(i, uuidToBytes(str)); // throws if not a UUID -> aborts migration (fail-safe)
+                        if (i == idIdx) {
+                            ins.setBytes(i, idToBlob(rs.getLong(i))); // INTEGER event id -> 16-byte BLOB
                         } else {
-                            ins.setObject(i, v);
+                            ins.setObject(i, rs.getObject(i));
                         }
                     }
                     ins.executeUpdate();
@@ -284,27 +300,19 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         return copied;
     }
 
-    private static byte[] uuidToBytes(String s) {
-        java.util.UUID u = java.util.UUID.fromString(s.trim());
-        return java.nio.ByteBuffer.allocate(16).putLong(u.getMostSignificantBits()).putLong(u.getLeastSignificantBits()).array();
+    private static byte[] idToBlob(long id) {
+        return java.nio.ByteBuffer.allocate(16).putLong(0L).putLong(id).array();
     }
 
-    private static String findTextPkColumn(String createSql) {
-        // Matches: <"col"|col> TEXT ... PRIMARY KEY, with the [^,()] guard keeping it to one column definition.
-        java.util.regex.Matcher m = java.util.regex.Pattern
-                .compile("(?is)[(,]\\s*\"?([A-Za-z0-9_]+)\"?\\s+TEXT\\b[^,()]*\\bPRIMARY\\s+KEY")
-                .matcher(createSql);
-        return m.find() ? m.group(1) : null;
-    }
-
-    private boolean sqliteHasTextPrimaryKey(Path db) {
+    private boolean sqliteViolationsHasIntegerId(Path db) {
         try (java.sql.Connection c = java.sql.DriverManager.getConnection("jdbc:sqlite:" + db.toAbsolutePath());
              java.sql.Statement s = c.createStatement();
-             java.sql.ResultSet rs = s.executeQuery("SELECT sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL")) {
+             java.sql.ResultSet rs = s.executeQuery("PRAGMA table_info('grim_violations')")) {
+            // V2 wants grim_violations.id as a BLOB; the legacy INTEGER PRIMARY KEY is the SQLITE_MISMATCH shape.
             while (rs.next()) {
-                String sql = rs.getString(1);
-                // A TEXT column that is itself the PRIMARY KEY (the [^,()] stops at the column boundary).
-                if (sql != null && sql.toUpperCase(java.util.Locale.ROOT).matches("(?s).*\\bTEXT\\b[^,()]*\\bPRIMARY KEY\\b.*")) {
+                String type = rs.getString("type");
+                if ("id".equalsIgnoreCase(rs.getString("name")) && rs.getInt("pk") > 0
+                        && type != null && type.toUpperCase(java.util.Locale.ROOT).contains("INT")) {
                     return true;
                 }
             }
