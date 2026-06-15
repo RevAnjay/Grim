@@ -164,7 +164,7 @@ public class PacketEntity extends TypedPacketEntity {
             }
         }
         if (hasPos) {
-            updateInterpVelEstimate();
+            updateInterpVelEstimate(player.getClientVersion());
             // A sub-64 non-relative teleport still lerps over N ticks; feed the jump to the next clamp so its tail isn't clipped.
             if (!relative) {
                 final Vector3d now = trackedServerPosition.getPos();
@@ -219,10 +219,10 @@ public class PacketEntity extends TypedPacketEntity {
 
     // Decaying rolling-max of server-position deltas; decay = lerp rate (N-1)/N so it tracks the interp lag tail.
     // Teleport-magnitude deltas (>= relative-move cap) excluded so a teleport can't inflate it.
-    private void updateInterpVelEstimate() {
+    private void updateInterpVelEstimate(ClientVersion clientVersion) {
         final Vector3d now = trackedServerPosition.getPos();
         if (lastTrackedTargetPos != null) {
-            final int n = ReachInterpolationData.getInterpolationStepsFor(this);
+            final int n = ReachInterpolationData.getInterpolationStepsFor(this, clientVersion);
             final double decay = n <= 1 ? 0.0 : (n - 1.0) / n;
             final double dx = Math.abs(now.getX() - lastTrackedTargetPos.getX());
             final double dy = Math.abs(now.getY() - lastTrackedTargetPos.getY());

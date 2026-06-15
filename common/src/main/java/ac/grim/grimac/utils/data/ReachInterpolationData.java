@@ -57,7 +57,7 @@ public class ReachInterpolationData {
             targetLocation.expand(0.03125);
         }
 
-        interpolationSteps = getInterpolationStepsFor(entity);
+        interpolationSteps = getInterpolationStepsFor(entity, player.getClientVersion());
 
         // If the player doesn't tick reliably, their interpolation is anywhere between min and max steps.
         if (unreliableTicking) interpolationStepsHighBound = getInterpolationSteps();
@@ -66,8 +66,11 @@ public class ReachInterpolationData {
         clampStartToTarget();
     }
 
-    public static int getInterpolationStepsFor(PacketEntity entity) {
-        if (entity.isBoat) return 10;
+    public static int getInterpolationStepsFor(PacketEntity entity, ClientVersion clientVersion) {
+        // 1.21.2 reworked boats (AbstractBoat) off the hardcoded 10-step lerp onto the generic 3-step entity lerp
+        // (ClientPacketListener passes 3; 1.21.5+ keeps 3 via InterpolationHandler). Keying off CLIENT version since
+        // interpolation is client-side render lag. A wider count than vanilla = reach surplus, so match it exactly.
+        if (entity.isBoat) return clientVersion.isNewerThanOrEquals(ClientVersion.V_1_21_2) ? 3 : 10;
         if (entity.isMinecart) return 5;
         if (entity.getType() == EntityTypes.SHULKER) return 1;
         if (entity.isLivingEntity) return 3;
