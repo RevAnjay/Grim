@@ -823,7 +823,16 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         if (backendConfig instanceof SqliteBackendConfig c) {
             Path dbFile = dataFolder.resolve(c.path());
             return new JdbcCheckCatalogPersistence(
-                    () -> DriverManager.getConnection("jdbc:sqlite:" + dbFile.toAbsolutePath()),
+                    () -> {
+                        java.sql.Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.toAbsolutePath());
+                        // This is a second connection to a file the V2 backend writer also holds; SQLite is
+                        // single-writer, so without a busy timeout a catalog insert racing the writer fails
+                        // instantly with SQLITE_BUSY. Wait for the lock instead (the startup burst is short).
+                        try (java.sql.Statement s = conn.createStatement()) {
+                            s.execute("PRAGMA busy_timeout=5000");
+                        }
+                        return conn;
+                    },
                     c.tableNames().checks());
         }
         if (backendConfig instanceof MysqlBackendConfig c) {
