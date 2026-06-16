@@ -367,7 +367,7 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         }
 
         ensureCheckCatalogStore(v2ById);
-        this.checkRegistry = buildCheckRegistry(dataFolder);
+        this.checkRegistry = buildCheckRegistry(dataFolder, v2ById);
 
         for (Map.Entry<Category<?>, String> r : config.routing().entrySet()) {
             Category<?> cat = r.getKey();
@@ -795,10 +795,11 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         }
     }
 
-    private @NotNull CheckRegistry buildCheckRegistry(@NotNull Path dataFolder) {
+    private @NotNull CheckRegistry buildCheckRegistry(@NotNull Path dataFolder, @NotNull Map<String, BackendV2> v2ById) {
         String backendId = config.routing().get(Categories.VIOLATION);
         BackendConfig backendConfig = backendId == null ? null : config.backends().get(backendId);
-        CheckCatalogPersistence persistence = checkCatalogPersistenceFor(dataFolder, backendConfig);
+        BackendV2 backend = backendId == null ? null : v2ById.get(backendId);
+        CheckCatalogPersistence persistence = checkCatalogPersistenceFor(dataFolder, backendConfig, backend);
         if (persistence == null) {
             logger.warning("[grim-datastore] no persisted check catalog available for v2 backend '"
                     + backendId + "' — check names will be process-local only");
@@ -819,15 +820,22 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
     }
 
     private @Nullable CheckCatalogPersistence checkCatalogPersistenceFor(
-            @NotNull Path dataFolder, @Nullable BackendConfig backendConfig) {
+            @NotNull Path dataFolder, @Nullable BackendConfig backendConfig, @Nullable BackendV2 backend) {
         if (backendConfig instanceof SqliteBackendConfig c) {
+            // The V2 SQLite backend keeps one WAL connection with an open single-writer transaction, so a separate
+            // catalog connection can never take the write lock and dies on SQLITE_BUSY (busy_timeout only delays
+            // it). Share the backend's own connection - getConnection() hands out a NonClosingConnection, so our
+            // try-with-resources close() is a no-op and SQLite serializes the catalog insert with the writer on
+            // one connection. Fall back to a private busy-timeout connection only if the backend can't expose it.
+            javax.sql.DataSource shared = backend == null
+                    ? null : backend.unwrap(javax.sql.DataSource.class).orElse(null);
+            if (shared != null) {
+                return new JdbcCheckCatalogPersistence(shared::getConnection, c.tableNames().checks());
+            }
             Path dbFile = dataFolder.resolve(c.path());
             return new JdbcCheckCatalogPersistence(
                     () -> {
                         java.sql.Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.toAbsolutePath());
-                        // This is a second connection to a file the V2 backend writer also holds; SQLite is
-                        // single-writer, so without a busy timeout a catalog insert racing the writer fails
-                        // instantly with SQLITE_BUSY. Wait for the lock instead (the startup burst is short).
                         try (java.sql.Statement s = conn.createStatement()) {
                             s.execute("PRAGMA busy_timeout=5000");
                         }
