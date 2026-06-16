@@ -219,9 +219,11 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
                 int rows = convertLegacyViolations(bak, db);
                 logger.info("[grim-datastore] auto-migrated " + rows + " legacy violation rows into the new schema");
             } catch (Exception conv) {
-                // Fail-safe: discard the partial converted db and let the backend create a fresh one.
-                // The full old history stays intact in the .bak, recoverable via /grim history migrate.
-                try { java.nio.file.Files.deleteIfExists(db); } catch (Exception ignored) {}
+                // Fail-safe: discard the partial converted db AND its journal siblings (a stale -wal/-shm would
+                // otherwise lock the fresh schema the backend creates -> SQLITE_BUSY). Old history stays in the .bak.
+                deleteQuietly(db);
+                deleteQuietly(db.resolveSibling(db.getFileName() + "-wal"));
+                deleteQuietly(db.resolveSibling(db.getFileName() + "-shm"));
                 logger.log(Level.WARNING, "[grim-datastore] auto-migration of legacy history failed; "
                         + "starting with a fresh schema (old data preserved in " + bak.getFileName() + ")", conv);
             }
@@ -326,6 +328,10 @@ public final class DataStoreLifecycle implements StartableInitable, StoppableIni
         if (java.nio.file.Files.exists(file)) {
             java.nio.file.Files.move(file, file.resolveSibling(file.getFileName() + "." + stamp + ".bak"));
         }
+    }
+
+    private static void deleteQuietly(Path file) {
+        try { java.nio.file.Files.deleteIfExists(file); } catch (Exception ignored) {}
     }
 
     private boolean buildAndStart(Path dataFolder) throws Exception {
