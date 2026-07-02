@@ -54,6 +54,9 @@ public class MovementCheckRunner extends Check implements PositionCheck {
     public static double predictionNanos = 0.3 * 1e6;
     // Averaged over 20000 predictions
     public static double longPredictionNanos = 0.3 * 1e6;
+    // 50 blocks squared: a larger single-tick move is non-physical. Shared with CrashA, which reuses
+    // this exact line one pipeline stage earlier to drop the packet before the ~0.3ms prediction runs.
+    public static final double NON_PHYSICAL_TICK_DISTANCE_SQUARED = 2500;
     private boolean allowSprintJumpingWithElytra = true;
 
     public MovementCheckRunner(GrimPlayer player) {
@@ -419,7 +422,7 @@ public class MovementCheckRunner extends Check implements PositionCheck {
         SimpleCollisionBox expandedBB = GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.lastX, player.lastY, player.lastZ, 0.001f, 0.001f);
 
         // Don't expand if the player moved more than 50 blocks this tick (stop netty crash exploit)
-        if (player.actualMovement.lengthSquared() < 2500)
+        if (player.actualMovement.lengthSquared() < NON_PHYSICAL_TICK_DISTANCE_SQUARED)
             expandedBB.expandToAbsoluteCoordinates(player.x, player.y, player.z);
 
         expandedBB.expand(Pose.STANDING.width / 2, 0, Pose.STANDING.width / 2);

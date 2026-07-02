@@ -276,6 +276,7 @@ public class CheckManager {
                 .put(TimerLimit.class, new TimerLimit(player))
                 .put(CrashA.class, new CrashA(player))
                 .put(CrashC.class, new CrashC(player))
+                .put(CrashJ.class, new CrashJ(player))
                 .put(VehicleTimer.class, new VehicleTimer(player))
                 .build();
 
