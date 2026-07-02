@@ -39,6 +39,9 @@ on:
             - '**.toml'
 jobs:
     call-build-workflow:
+        permissions:
+            contents: read
+            packages: write
         uses: ./.github/workflows/build-and-publish.yml
         with:
             runner: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
