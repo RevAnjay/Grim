@@ -553,9 +553,12 @@ public class PredictionEngine {
             bonusY += 0.1;
         }
 
-        // Crowd push/knockback injects a sub-0.003 vertical the sim can't model and the box is zero here, so it
-        // flags. Tolerate one clamp-width of Y only near a pushable entity - bounded, non-compounding, no fly/step.
-        if (!isElytraFlight && player.uncertaintyHandler.lastPushableNear.hasOccurredSince(20)) {
+        // A knockback velocity resync leaves a sub-0.003 Y that survives the client clamp but Grim reconstructs
+        // below it and zeroes it (box is zero here) - tolerate one clamp-width when knockback is pending (the
+        // cause, incl. a distant attacker where no entity is near) or a pushable entity is near. Bounded, non-
+        // compounding, server-gated, no fly/step.
+        if (!isElytraFlight && (player.likelyKB != null || player.firstBreadKB != null
+                || player.uncertaintyHandler.lastPushableNear.hasOccurredSince(20))) {
             bonusY += 0.003;
         }
 
