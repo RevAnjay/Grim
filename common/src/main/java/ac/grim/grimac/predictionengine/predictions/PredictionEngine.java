@@ -553,6 +553,12 @@ public class PredictionEngine {
             bonusY += 0.1;
         }
 
+        // Crowd push/knockback injects a sub-0.003 vertical the sim can't model and the box is zero here, so it
+        // flags. Tolerate one clamp-width of Y only near a pushable entity - bounded, non-compounding, no fly/step.
+        if (!isElytraFlight && player.uncertaintyHandler.lastPushableNear.hasOccurredSince(20)) {
+            bonusY += 0.003;
+        }
+
         // Handle horizontal fluid pushing within 0.03
         double horizontalFluid = player.pointThreeEstimator.getHorizontalFluidPushingUncertainty(vector);
         additionHorizontal += horizontalFluid;
