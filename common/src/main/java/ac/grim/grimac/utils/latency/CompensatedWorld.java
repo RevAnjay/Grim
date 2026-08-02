@@ -1,6 +1,7 @@
 package ac.grim.grimac.utils.latency;
 
 import ac.grim.grimac.GrimAPI;
+import ac.grim.grimac.checks.impl.combat.Reach;
 import ac.grim.grimac.api.PacketWorld;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.change.BlockModification;
@@ -308,6 +309,12 @@ public class CompensatedWorld implements PacketWorld {
 
             // The method also gets called for the previous state before replacement
             player.pointThreeEstimator.handleChangeBlock(x, y, z, previousState);
+
+            // Here, where both states are in scope: a resync that rewrites the same block is not a change,
+            // and counting it would hand out the wall hit exemption for free.
+            if (!previousState.equals(newState)) {
+                player.checkManager.getPacketCheck(Reach.class).handleBlockChange(new Vector3i(x, y, z));
+            }
 
             chunk.set(x & 0xF, offsetY & 0xF, z & 0xF, combinedID);
             player.compensatedGeysers.updateBlock(x, y, z, previousState, newState, minHeight);

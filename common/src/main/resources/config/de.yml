@@ -201,6 +201,8 @@ Trigger:
 WallHit:
     # Enable detection of hitting through blocks (doors, trapdoors, etc.)
     enabled: true
+    # Cancel the hit outright instead of only flagging it. Off: the aim used for the hit has not arrived yet.
+    cancel-hits: false
     # Only check hits against players
     only-players: false
     # Setback VL for hitting through blocks
@@ -358,6 +360,8 @@ Reach:
     enable-post-packet: true
     # Force enable post-packet even on 1.8 servers where it is auto-disabled.
     force-enable-post-packet: false
+    # How fast a player stops being real-time checked after a flag. Lower keeps them checked longer.
+    cancel-buffer-decay: 0.25
 
 exploit:
     allow-sprint-jumping-when-using-elytra: true

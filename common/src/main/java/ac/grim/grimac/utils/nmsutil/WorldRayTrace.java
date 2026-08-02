@@ -28,6 +28,7 @@ import lombok.experimental.UtilityClass;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiFunction;
 
 @UtilityClass
@@ -159,7 +160,8 @@ public class WorldRayTrace {
     }
 
     @Nullable
-    public static HitData getNearestHitResult(GrimPlayer player, PacketEntity targetEntity, Vector3dm eyePos, Vector3dm lookVec) {
+    public static HitData getNearestHitResult(GrimPlayer player, PacketEntity targetEntity, Vector3dm eyePos, Vector3dm lookVec,
+                                              @Nullable Set<String> ignoredBlocks, @Nullable Set<Vector3i> ignoredPositions) {
 
         double maxAttackDistance = player.compensatedEntities.self.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE);
         double maxBlockDistance = player.compensatedEntities.self.getAttributeValue(Attributes.BLOCK_INTERACTION_RANGE);
@@ -170,7 +172,7 @@ public class WorldRayTrace {
         Vector3d endPos = trace.getPointAtDistance(maxBlockDistance);
 
         // Get block hit
-        BlockHitData blockHitData = getTraverseResult(player, null, startingPos, startingVec, trace, endPos, false, true, maxBlockDistance, true);
+        BlockHitData blockHitData = getTraverseResult(player, null, startingPos, startingVec, trace, endPos, false, true, maxBlockDistance, true, ignoredBlocks, ignoredPositions);
         Vector3dm closestHitVec = null;
         PacketEntity closestEntity = null;
         double closestDistanceSquared = blockHitData != null ? blockHitData.getBlockHitLocation().distanceSquared(startingVec) : maxAttackDistance * maxAttackDistance;
@@ -231,7 +233,9 @@ public class WorldRayTrace {
     // in previous parts of this check when we didn't check for any obstructions like blocks/entities
     public static @NotNull Pair<@NotNull Double, @NotNull HitData> didRayTraceHit(GrimPlayer player, PacketEntity targetEntity,
                                                                                    List<Pair<Vector3dm, Double>> possibleLookVecsAndEyeHeights,
-                                                                                   double x, double y, double z) {
+                                                                                   double x, double y, double z,
+                                                                                   @Nullable Set<String> ignoredBlocks,
+                                                                                   @Nullable Set<Vector3i> ignoredPositions) {
         HitData firstObstruction = null;
         double firstObstructionDistanceSq = 0;
 
@@ -242,7 +246,7 @@ public class WorldRayTrace {
 
             Vector3dm eyes = new Vector3dm(x, y + eye, z);
             // this function is completely 0.03 aware
-            final HitData hitResult = WorldRayTrace.getNearestHitResult(player, targetEntity, eyes, lookVec);
+            final HitData hitResult = WorldRayTrace.getNearestHitResult(player, targetEntity, eyes, lookVec, ignoredBlocks, ignoredPositions);
 
             // If we hit the target entity, it's a valid hit
             if (hitResult instanceof EntityHitData && ((EntityHitData) hitResult).getEntity().equals(targetEntity)) {
@@ -261,12 +265,70 @@ public class WorldRayTrace {
         return new Pair<>(firstObstructionDistanceSq, firstObstruction);
     }
 
+    // The 0.03 shrink stands in for not knowing the eye position exactly, but shrinking each block on its
+    // own invents a 0.06 slit at every seam between two flush blocks. A ray held level with a seam then
+    // threads solid stone. Faces that another full block sits against keep their full size.
+    // Answers depend on the cell, not on which sub-box of it we are shrinking, so they are worked out once.
+    private static boolean[] sealedFaces(GrimPlayer player, Vector3i pos) {
+        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
+        return new boolean[]{
+                neighbourSeals(player, x, y, z, -1, 0, 0),
+                neighbourSeals(player, x, y, z, 1, 0, 0),
+                neighbourSeals(player, x, y, z, 0, -1, 0),
+                neighbourSeals(player, x, y, z, 0, 1, 0),
+                neighbourSeals(player, x, y, z, 0, 0, -1),
+                neighbourSeals(player, x, y, z, 0, 0, 1)};
+    }
+
+    private static void shrinkExposedFaces(GrimPlayer player, SimpleCollisionBox box, Vector3i pos, boolean[] sealed) {
+        final double threshold = player.getMovementThreshold();
+        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
+
+        if (box.minX > x || !sealed[0]) box.minX += threshold;
+        if (box.maxX < x + 1 || !sealed[1]) box.maxX -= threshold;
+        if (box.minY > y || !sealed[2]) box.minY += threshold;
+        if (box.maxY < y + 1 || !sealed[3]) box.maxY -= threshold;
+        if (box.minZ > z || !sealed[4]) box.minZ += threshold;
+        if (box.maxZ < z + 1 || !sealed[5]) box.maxZ -= threshold;
+    }
+
+    // A slab sitting on stone is flush with it even though neither is a full cube, so the test is whether
+    // the neighbour reaches the shared plane and covers the whole face, not whether it fills its own cell.
+    private static boolean neighbourSeals(GrimPlayer player, int x, int y, int z, int dx, int dy, int dz) {
+        final int nx = x + dx, ny = y + dy, nz = z + dz;
+        WrappedBlockState state = player.compensatedWorld.getBlock(nx, ny, nz);
+        CollisionBox data = HitboxData.getBlockHitbox(player, null, player.getClientVersion(), state, false, nx, ny, nz);
+
+        SimpleCollisionBox[] boxes = new SimpleCollisionBox[ComplexCollisionBox.DEFAULT_MAX_COLLISION_BOX_SIZE];
+        int size = data.downCast(boxes);
+
+        for (int i = 0; i < size; i++) {
+            SimpleCollisionBox box = boxes[i];
+            if (dx != 0) {
+                boolean touches = dx > 0 ? box.minX <= x + 1 : box.maxX >= x;
+                if (touches && box.minY <= y && box.maxY >= y + 1 && box.minZ <= z && box.maxZ >= z + 1) return true;
+            } else if (dy != 0) {
+                boolean touches = dy > 0 ? box.minY <= y + 1 : box.maxY >= y;
+                if (touches && box.minX <= x && box.maxX >= x + 1 && box.minZ <= z && box.maxZ >= z + 1) return true;
+            } else {
+                boolean touches = dz > 0 ? box.minZ <= z + 1 : box.maxZ >= z;
+                if (touches && box.minX <= x && box.maxX >= x + 1 && box.minY <= y && box.maxY >= y + 1) return true;
+            }
+        }
+        return false;
+    }
+
     // TODO replace shrinkBlocks boolean with a data structure/better way to represent
     // 1. We have a target block. Shrink everything by movementThreshold except expand target block (we are checking to see if it matches the target block)
     // 2. We do not have a target block. Shrink everything by movementThreshold()
     // 3. Do not expand or shrink everything, we do not expect 0.03/0.002 or we legacy example where we want to keep old behaviour
-    private static BlockHitData getTraverseResult(GrimPlayer player, @Nullable StateType heldItem, Vector3d startingPos, Vector3dm startingVec, Ray trace, Vector3d endPos, boolean sourcesHaveHitbox, boolean checkInside, double knownDistance, boolean shrinkBlocks) {
+    private static BlockHitData getTraverseResult(GrimPlayer player, @Nullable StateType heldItem, Vector3d startingPos, Vector3dm startingVec, Ray trace, Vector3d endPos, boolean sourcesHaveHitbox, boolean checkInside, double knownDistance, boolean shrinkBlocks,
+                                                  @Nullable Set<String> ignoredBlocks, @Nullable Set<Vector3i> ignoredPositions) {
         return traverseBlocks(player, startingPos, endPos, (block, vector3i) -> {
+            // Skipped rather than reported: treating an exempt block as the answer ends the trace and
+            // leaves whatever is behind it unexamined, which turns a slab held at eye level into a visor.
+            if (ignoredPositions != null && ignoredPositions.contains(vector3i)) return null;
+            if (ignoredBlocks != null && ignoredBlocks.contains(block.getType().getName().toUpperCase())) return null;
             // even though sometimes we are raytracing against a block that is the target block, we pass false to this function because it only applies a change for brewing stands in 1.8
             CollisionBox data = HitboxData.getBlockHitbox(player, heldItem, player.getClientVersion(), block, false, vector3i.getX(), vector3i.getY(), vector3i.getZ());
             SimpleCollisionBox[] boxes = new SimpleCollisionBox[ComplexCollisionBox.DEFAULT_MAX_COLLISION_BOX_SIZE];
@@ -275,9 +337,10 @@ public class WorldRayTrace {
             double bestHitResult = Double.MAX_VALUE;
             Vector3dm bestHitLoc = null;
             BlockFace bestFace = null;
+            boolean[] sealed = shrinkBlocks && size > 0 ? sealedFaces(player, vector3i) : null;
 
             for (int i = 0; i < size; i++) {
-                if (shrinkBlocks) boxes[i].expand(-player.getMovementThreshold());
+                if (shrinkBlocks) shrinkExposedFaces(player, boxes[i], vector3i, sealed);
                 Pair<Vector3d, BlockFace> intercept = ReachUtils.calculateIntercept(boxes[i], trace.origin(), trace.getPointAtDistance(knownDistance));
                 if (intercept.first() == null) continue; // No intercept
 

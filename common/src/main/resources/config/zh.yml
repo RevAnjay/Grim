@@ -220,6 +220,8 @@ Trigger:
 WallHit:
     # Enable detection of hitting through blocks (doors, trapdoors, etc.)
     enabled: true
+    # Cancel the hit outright instead of only flagging it. Off: the aim used for the hit has not arrived yet.
+    cancel-hits: false
     # Only check hits against players
     only-players: false
     # Setback VL for hitting through blocks
@@ -384,6 +386,8 @@ Reach:
     # 启用此功能将检查到更多作弊者。
     # 禁用此功能仍会检查到作弊者，不会导致误报
     # 除非你是专注于1.8版本的PvP服务器，否则不建议使用这个额外的数据包
+    # How fast a player stops being real-time checked after a flag. Lower keeps them checked longer.
+    cancel-buffer-decay: 0.25
 
 exploit:
     allow-sprint-jumping-when-using-elytra: true
