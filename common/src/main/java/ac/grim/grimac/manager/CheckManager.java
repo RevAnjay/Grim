@@ -2,6 +2,7 @@ package ac.grim.grimac.manager;
 
 import ac.grim.grimac.GrimAPI;
 import ac.grim.grimac.api.AbstractCheck;
+import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.debug.HitboxDebugHandler;
 import ac.grim.grimac.checks.impl.aim.AimDuplicateLook;
 import ac.grim.grimac.checks.impl.aim.AimModulo360;
@@ -48,6 +49,7 @@ import ac.grim.grimac.events.packets.PacketChangeGameState;
 import ac.grim.grimac.events.packets.PacketEntityReplication;
 import ac.grim.grimac.events.packets.PacketPlayerAbilities;
 import ac.grim.grimac.events.packets.PacketWorldBorder;
+import ac.grim.grimac.internal.storage.verbose.VerboseRegistry;
 import ac.grim.grimac.manager.init.start.SuperDebug;
 import ac.grim.grimac.platform.api.permissions.PermissionDefaultValue;
 import ac.grim.grimac.player.GrimPlayer;
@@ -63,10 +65,7 @@ import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.ImmutableClassToInstanceMap;
-import lombok.Getter;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CheckManager {
@@ -82,22 +81,18 @@ public class CheckManager {
     private final ClassToInstanceMap<BlockBreakCheck> blockBreakChecks;
     private final ClassToInstanceMap<BlockPlaceCheck> blockPlaceChecks;
     private final ClassToInstanceMap<PostPredictionCheck> postPredictionChecks;
-    @Getter
-    private final PacketEntityReplication packetEntityReplication;
 
-    private final List<PacketCheck> preViaPacketChecksValues;
-    private final List<PacketCheck> packetChecksValues;
-    private final List<PositionCheck> positionChecksValues;
-    private final List<RotationCheck> rotationChecksValues;
-    private final List<VehicleCheck> vehicleChecksValues;
-    private final List<PacketCheck> prePredictionChecksValues;
-    private final List<BlockBreakCheck> blockBreakChecksValues;
-    private final List<BlockPlaceCheck> blockPlaceChecksValues;
-    private final List<PostPredictionCheck> postPredictionChecksValues;
+    private final PacketCheck[] preViaPacketChecksValues;
+    private final PacketCheck[] packetChecksValues;
+    private final PositionCheck[] positionChecksValues;
+    private final RotationCheck[] rotationChecksValues;
+    private final VehicleCheck[] vehicleChecksValues;
+    private final PacketCheck[] prePredictionChecksValues;
+    private final BlockBreakCheck[] blockBreakChecksValues;
+    private final BlockPlaceCheck[] blockPlaceChecksValues;
+    private final PostPredictionCheck[] postPredictionChecksValues;
 
     public CheckManager(GrimPlayer player) {
-        packetEntityReplication = new PacketEntityReplication(player);
-
         preViaPacketChecks = new ImmutableClassToInstanceMap.Builder<PacketCheck>()
                 .put(CompensatedCameraEntity.class, player.cameraEntity)
                 .put(ChatA.class, new ChatA(player))
@@ -129,7 +124,7 @@ public class CheckManager {
                 .put(PacketOrderProcessor.class, player.packetOrderProcessor)
                 .put(FreezeAttack.class, new FreezeAttack(player))
                 .put(Reach.class, new Reach(player))
-                .put(PacketEntityReplication.class, packetEntityReplication)
+                .put(PacketEntityReplication.class, player.packetEntityReplication)
                 .put(PacketChangeGameState.class, new PacketChangeGameState(player))
                 .put(CompensatedInventory.class, player.inventory)
                 .put(PacketPlayerAbilities.class, new PacketPlayerAbilities(player))
@@ -156,7 +151,6 @@ public class CheckManager {
                 .put(MultiActionsD.class, new MultiActionsD(player))
                 .put(PacketOrderO.class, new PacketOrderO(player))
 //                .put(PacketOrderP.class, new PacketOrderP(player))
-                .put(SprintA.class, new SprintA(player))
                 .put(VehicleD.class, new VehicleD(player))
                 .put(VehicleE.class, new VehicleE(player))
                 .put(VehicleF.class, new VehicleF(player))
@@ -224,6 +218,7 @@ public class CheckManager {
                 .put(DebugHandler.class, new DebugHandler(player))
                 .put(BadPacketsX.class, new BadPacketsX(player))
                 .put(NoSlow.class, new NoSlow(player))
+                .put(SprintA.class, new SprintA(player))
                 .put(SprintB.class, new SprintB(player))
                 .put(SprintC.class, new SprintC(player))
                 // .put(SprintD.class, new SprintD(player)) // Disabled: useless check, false positives
@@ -321,17 +316,29 @@ public class CheckManager {
                 .putAll(noneModules)
                 .build();
 
-        preViaPacketChecksValues = new ArrayList<>(preViaPacketChecks.values());
-        packetChecksValues = new ArrayList<>(packetChecks.values());
-        positionChecksValues = new ArrayList<>(positionChecks.values());
-        rotationChecksValues = new ArrayList<>(rotationChecks.values());
-        vehicleChecksValues = new ArrayList<>(vehicleChecks.values());
-        prePredictionChecksValues = new ArrayList<>(prePredictionChecks.values());
-        blockBreakChecksValues = new ArrayList<>(blockBreakChecks.values());
-        blockPlaceChecksValues = new ArrayList<>(blockPlaceChecks.values());
-        postPredictionChecksValues = new ArrayList<>(postPredictionChecks.values());
+        preViaPacketChecksValues = preViaPacketChecks.values().toArray(new PacketCheck[0]);
+        packetChecksValues = packetChecks.values().toArray(new PacketCheck[0]);
+        positionChecksValues = positionChecks.values().toArray(new PositionCheck[0]);
+        rotationChecksValues = rotationChecks.values().toArray(new RotationCheck[0]);
+        vehicleChecksValues = vehicleChecks.values().toArray(new VehicleCheck[0]);
+        prePredictionChecksValues = prePredictionChecks.values().toArray(new PacketCheck[0]);
+        blockBreakChecksValues = blockBreakChecks.values().toArray(new BlockBreakCheck[0]);
+        blockPlaceChecksValues = blockPlaceChecks.values().toArray(new BlockPlaceCheck[0]);
+        postPredictionChecksValues = postPredictionChecks.values().toArray(new PostPredictionCheck[0]);
 
         init();
+    }
+
+    private void registerBuiltInVerboseTemplates() {
+        VerboseRegistry registry = GrimAPI.INSTANCE.getDataStoreLifecycle().verboseRegistry();
+        if (registry == null) return;
+        registry.registerTemplates(() -> {
+            for (AbstractCheck check : allChecks.values()) {
+                if (check instanceof Check grimCheck) {
+                    grimCheck.registerVerboseTemplates(registry);
+                }
+            }
+        });
     }
 
     public <T extends AbstractCheck> T getCheck(Class<T> check) {
@@ -512,6 +519,8 @@ public class CheckManager {
         if (inited || initedAtomic.getAndSet(true)) return;
         inited = true;
 
+        registerBuiltInVerboseTemplates();
+
         final String[] permissions = {
                 "grim.exempt.",
                 "grim.nosetback.",
@@ -522,8 +531,7 @@ public class CheckManager {
             if (check.getConfigName() == null) continue;
             final String id = check.getConfigName().toLowerCase();
             for (String permissionName : permissions) {
-                permissionName += id;
-                GrimAPI.INSTANCE.getPermissionManager().registerPermission(permissionName, PermissionDefaultValue.FALSE);
+                GrimAPI.INSTANCE.getPermissionManager().registerPermission(permissionName + id, PermissionDefaultValue.FALSE);
             }
         }
     }

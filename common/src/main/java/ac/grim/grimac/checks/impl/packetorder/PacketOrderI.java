@@ -1,7 +1,7 @@
 package ac.grim.grimac.checks.impl.packetorder;
 
 import ac.grim.grimac.api.config.ConfigManager;
-import ac.grim.grimac.api.storage.verbose.VerboseSchema;
+import ac.grim.grimac.api.storage.verbose.Verbose;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PostPredictionCheck;
@@ -12,20 +12,17 @@ import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.GameMode;
+import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayDeque;
 
-@CheckData(name = "PacketOrderI", stableKey = "grim.packetorder.input_tick_order", experimental = true, verboseVersion = 1)
+@CheckData(name = "PacketOrderI", stableKey = "grim.packetorder.input_tick_order", description = "Sent combat, use, release, or digging packets in an invalid tick order", experimental = true)
 public class PacketOrderI extends Check implements PostPredictionCheck {
-    public static final VerboseSchema V = VerboseSchema.of(
-            "type:vi",
-            "attacking:bool",
-            "rightClicking:bool",
-            "picking:bool",
-            "releasing:bool",
-            "digging:bool");
+    private static final Verbose V = Verbose
+            .of("type={str}[, attacking={bool}][, rightClicking={bool}][, picking={bool}][, releasing={bool}], digging={bool}");
 
     static final int TYPE_INTERACT = 0;
     static final int TYPE_PLACE_USE = 1;
@@ -39,7 +36,10 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
     private boolean exemptPlacingWhileDigging;
 
     private boolean setback;
-    private boolean digging; // for placing
+    // for placing
+    private boolean cancelledDigging;
+    private WrappedBlockState startedDiggingBlock;
+    private boolean digging;
     private final ArrayDeque<FlagData> flags = new ArrayDeque<>();
 
     static String typeName(int type) {
@@ -52,28 +52,27 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
         };
     }
 
-    static String verbose(
+    /**
+     * Each per-field group is gated so only the fields relevant to the type
+     * render: attacking for release; rightClicking/picking for release and
+     * attack; releasing for everything but release; digging always.
+     */
+    private Verbose.Writer write(
             int type,
             boolean attacking,
             boolean rightClicking,
             boolean picking,
             boolean releasing,
             boolean digging) {
-        return switch (type) {
-            case TYPE_INTERACT, TYPE_PLACE_USE ->
-                    "type=" + typeName(type) + ", releasing=" + releasing + ", digging=" + digging;
-            case TYPE_RELEASE ->
-                    "type=release, attacking=" + attacking
-                            + ", rightClicking=" + rightClicking
-                            + ", picking=" + picking
-                            + ", digging=" + digging;
-            case TYPE_ATTACK ->
-                    "type=attack, rightClicking=" + rightClicking
-                            + ", picking=" + picking
-                            + ", releasing=" + releasing
-                            + ", digging=" + digging;
-            default -> "type=unknown";
-        };
+        boolean release = type == TYPE_RELEASE;
+        boolean attack = type == TYPE_ATTACK;
+        return V.write(verbose())
+                .str(typeName(type))
+                .bool(release).bool(attacking)
+                .bool(release || attack).bool(rightClicking)
+                .bool(release || attack).bool(picking)
+                .bool(!release).bool(releasing)
+                .bool(digging);
     }
 
     @Override
@@ -85,13 +84,7 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
                 boolean releasing = player.packetOrderProcessor.isReleasing();
                 boolean digging = player.packetOrderProcessor.isDigging();
                 if (!player.canSkipTicks()) {
-                    if (flagAndAlert(V.write(verbose())
-                            .vi(TYPE_INTERACT)
-                            .bool(false)
-                            .bool(false)
-                            .bool(false)
-                            .bool(releasing)
-                            .bool(digging)) && shouldModifyPackets()) {
+                    if (flag(write(TYPE_INTERACT, false, false, false, releasing, digging)) && shouldModifyPackets()) {
                         event.setCancelled(true);
                         player.onPacketCancel();
                     }
@@ -102,16 +95,23 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
         }
 
         if (event.getPacketType() == PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT || event.getPacketType() == PacketType.Play.Client.USE_ITEM) {
+            digging |= cancelledDigging;
+
+            if (startedDiggingBlock != null && !digging) {
+                // Check this here because we don't know for certain what slot they were using until now.
+                // This is because the client doesn't notify the server when changing slots with the number keys,
+                // and that the client doesn't sync the hotbar slot when starting to dig.
+                // The client does sync on placing and using though, so this is safe.
+                double damage = BlockBreakSpeed.getBlockDamage(player, startedDiggingBlock);
+                if (damage < 1 && (damage > 0 || player.gamemode != GameMode.CREATIVE)) {
+                    digging = true;
+                }
+            }
+
             if (player.packetOrderProcessor.isReleasing() || digging) {
                 boolean releasing = player.packetOrderProcessor.isReleasing();
                 if (!player.canSkipTicks()) {
-                    if (flagAndAlert(V.write(verbose())
-                            .vi(TYPE_PLACE_USE)
-                            .bool(false)
-                            .bool(false)
-                            .bool(false)
-                            .bool(releasing)
-                            .bool(digging)) && shouldModifyPackets()) {
+                    if (flag(write(TYPE_PLACE_USE, false, false, false, releasing, digging)) && shouldModifyPackets()) {
                         event.setCancelled(true);
                         player.onPacketCancel();
                     }
@@ -129,23 +129,15 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
             WrapperPlayClientPlayerDigging packet = new WrapperPlayClientPlayerDigging(event);
 
             switch (packet.getAction()) {
-                case STAB:
-                    onAttack(event);
-                    break;
-                case RELEASE_USE_ITEM:
+                case STAB -> onAttack(event);
+                case RELEASE_USE_ITEM -> {
                     if (player.packetOrderProcessor.isAttackingOrStabbing() || player.packetOrderProcessor.isRightClicking() || player.packetOrderProcessor.isPicking() || player.packetOrderProcessor.isDigging()) {
                         boolean attacking = player.packetOrderProcessor.isAttackingOrStabbing();
                         boolean rightClicking = player.packetOrderProcessor.isRightClicking();
                         boolean picking = player.packetOrderProcessor.isPicking();
                         boolean digging = player.packetOrderProcessor.isDigging();
                         if (!player.canSkipTicks()) {
-                            if (flagAndAlert(V.write(verbose())
-                                    .vi(TYPE_RELEASE)
-                                    .bool(attacking)
-                                    .bool(rightClicking)
-                                    .bool(picking)
-                                    .bool(false)
-                                    .bool(digging))) {
+                            if (flag(write(TYPE_RELEASE, attacking, rightClicking, picking, false, digging))) {
                                 setback = true;
                             }
                         } else {
@@ -153,23 +145,26 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
                             setback = true;
                         }
                     }
-                    break;
-                case START_DIGGING:
-                    double damage = BlockBreakSpeed.getBlockDamage(player, player.compensatedWorld.getBlock(packet.getBlockPosition()));
-                    if (damage >= 1 || damage <= 0 && player.gamemode == GameMode.CREATIVE) {
-                        return;
+                }
+                case START_DIGGING -> {
+                    if (shouldCheckPlacingWhileDigging()) {
+                        cancelledDigging = false; // we don't care about any cancels before this
+                        startedDiggingBlock = player.compensatedWorld.getBlock(packet.getBlockPosition());
                     }
-                case CANCELLED_DIGGING, FINISHED_DIGGING:
-                    if (exemptPlacingWhileDigging || player.getClientVersion().isOlderThanOrEquals(ClientVersion.V_1_7_10)) {
-                        return;
-                    }
-                    digging = true;
+                }
+                case CANCELLED_DIGGING -> cancelledDigging = shouldCheckPlacingWhileDigging();
+                case FINISHED_DIGGING -> digging = shouldCheckPlacingWhileDigging();
             }
         }
 
         if (!player.cameraEntity.isSelf() || isTickPacket(event.getPacketType())) {
-            digging = false;
+            cancelledDigging = digging = false;
+            startedDiggingBlock = null;
         }
+    }
+
+    private boolean shouldCheckPlacingWhileDigging() {
+        return !exemptPlacingWhileDigging && player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_8);
     }
 
     @Override
@@ -184,13 +179,8 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
 
         if (player.isTickingReliablyFor(3)) {
             for (FlagData data : flags) {
-                if (flagAndAlert(V.write(verbose())
-                        .vi(data.type())
-                        .bool(data.attacking())
-                        .bool(data.rightClicking())
-                        .bool(data.picking())
-                        .bool(data.releasing())
-                        .bool(data.digging())) && setback) {
+                if (flag(write(data.type(), data.attacking(), data.rightClicking(), data.picking(),
+                        data.releasing(), data.digging())) && setback) {
                     setbackIfAboveSetbackVL();
                     setback = false;
                 }
@@ -208,13 +198,7 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
             boolean releasing = player.packetOrderProcessor.isReleasing();
             boolean digging = player.packetOrderProcessor.isDigging();
             if (!player.canSkipTicks()) {
-                if (flagAndAlert(V.write(verbose())
-                        .vi(TYPE_ATTACK)
-                        .bool(false)
-                        .bool(rightClicking)
-                        .bool(picking)
-                        .bool(releasing)
-                        .bool(digging)) && shouldModifyPackets()) {
+                if (flag(write(TYPE_ATTACK, false, rightClicking, picking, releasing, digging)) && shouldModifyPackets()) {
                     event.setCancelled(true);
                     player.onPacketCancel();
                 }
@@ -225,7 +209,7 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
     }
 
     @Override
-    public void onReload(ConfigManager config) {
+    public void onReload(@NotNull ConfigManager config) {
         exemptPlacingWhileDigging = config.getBooleanElse(getConfigName() + ".exempt-placing-while-digging", false);
     }
 
@@ -235,6 +219,5 @@ public class PacketOrderI extends Check implements PostPredictionCheck {
             boolean rightClicking,
             boolean picking,
             boolean releasing,
-            boolean digging) {
-    }
+            boolean digging) {}
 }

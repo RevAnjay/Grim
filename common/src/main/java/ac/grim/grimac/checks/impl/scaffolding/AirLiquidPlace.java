@@ -1,7 +1,6 @@
 package ac.grim.grimac.checks.impl.scaffolding;
 
 import ac.grim.grimac.GrimAPI;
-import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.BlockPlaceCheck;
 import ac.grim.grimac.player.GrimPlayer;
@@ -78,14 +77,14 @@ public class AirLiquidPlace extends BlockPlaceCheck {
         }
 
         if (placeAgainst.isAir() || Materials.isNoPlaceLiquid(placeAgainst)) { // fail
-            if (flagAndAlert() && shouldModifyPackets() && shouldCancel()) {
+            if (flag() && shouldModifyPackets() && shouldCancel()) {
                 place.resync();
             }
         }
     }
 
     @Override
-    public void onReload(ConfigManager config) {
-        this.cancelVL = config.getIntElse(getConfigName() + ".cancelVL", 0);
+    protected int getDefaultCancelVL() {
+        return 0;
     }
 }

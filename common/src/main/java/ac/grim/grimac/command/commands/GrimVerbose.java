@@ -32,20 +32,20 @@ public class GrimVerbose implements BuildableCommand {
         String targetFilter = context.getOrDefault("player", null);
 
         if (sender.isPlayer()) {
-            PlatformPlayer p = Objects.requireNonNull(context.sender().getPlatformPlayer());
+            PlatformPlayer player = Objects.requireNonNull(context.sender().getPlatformPlayer(), "player");
             AlertManagerImpl am = GrimAPI.INSTANCE.getAlertManager();
-            boolean newState = !am.hasVerboseEnabled(p);
-            am.setVerboseEnabled(p, newState, false);
+            boolean newState = !am.hasVerboseEnabled(player);
+            am.setVerboseEnabled(player, newState, false);
             PlayerToggleStore toggles = GrimAPI.INSTANCE.getDataStoreLifecycle().playerToggleStore();
-            toggles.applyUserToggle(p.getUniqueId(), PlayerToggleStore.KEY_VERBOSE, newState);
+            toggles.applyUserToggle(player.getUniqueId(), PlayerToggleStore.KEY_VERBOSE, newState);
             // setVerboseEnabled(true) cascades to setAlertsEnabled(true) in AlertManager
             // — mirror that into the toggle store so the persisted alerts row tracks the
             // implied state, otherwise a verbose-on staff member would re-toggle alerts
             // off on next reconnect when persisted alerts is still false.
-            if (newState) toggles.applyUserToggle(p.getUniqueId(), PlayerToggleStore.KEY_ALERTS, true);
+            if (newState) toggles.applyUserToggle(player.getUniqueId(), PlayerToggleStore.KEY_ALERTS, true);
 
             if (newState) {
-                am.setPlayerFilter(p, targetFilter);
+                am.setPlayerFilter(player, targetFilter);
                 if (targetFilter != null) {
                     String msg = GrimAPI.INSTANCE.getConfigManager().getConfig()
                             .getStringElse("verbose-filter", "%prefix% &fFiltering verbose for: &b%player%")
@@ -53,7 +53,7 @@ public class GrimVerbose implements BuildableCommand {
                     sender.sendMessage(MessageUtil.miniMessage(MessageUtil.replacePlaceholders(sender, msg)));
                 }
             } else {
-                am.setPlayerFilter(p, null);
+                am.setPlayerFilter(player, null);
             }
         } else if (sender.isConsole()) {
             GrimAPI.INSTANCE.getAlertManager().toggleConsoleVerbose();

@@ -3,18 +3,19 @@ package ac.grim.grimac.checks.impl.prediction;
 import ac.grim.grimac.GrimAPI;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.api.event.events.CompletePredictionEvent;
-import ac.grim.grimac.api.storage.verbose.VerboseSchema;
+import ac.grim.grimac.api.storage.verbose.Verbose;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PostPredictionCheck;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.update.PredictionComplete;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-@CheckData(name = "Simulation", stableKey = "grim.prediction.simulation", verboseVersion = 1, decay = 0.02)
+@CheckData(name = "Simulation", stableKey = "grim.prediction.simulation", description = "Moved differently than predicted movement simulation", decay = 0.02)
 public class OffsetHandler extends Check implements PostPredictionCheck {
-    public static final VerboseSchema V = VerboseSchema.of("offset:f64");
+    private static final Verbose V = Verbose.of("{offset}");
 
     private static final AtomicInteger flags = new AtomicInteger(0);
 
@@ -51,11 +52,9 @@ public class OffsetHandler extends Check implements PostPredictionCheck {
             synchronized (flags) {
                 int flagId = (flags.get() & 255) + 1; // 1-256 as possible values
 
-                if (flag(V.write(verbose()).f64(offset))) {
-                    if (alert(() -> humanFormattedOffset(offset) + " /gl " + flagId)) {
-                        flags.incrementAndGet(); // This debug was sent somewhere
-                        predictionComplete.setIdentifier(flagId);
-                    }
+                if (flag(V.write(verbose()).f64(offset), () -> humanFormattedOffset(offset) + " /gl " + flagId)) {
+                    flags.incrementAndGet();
+                    predictionComplete.setIdentifier(flagId);
 
                     if ((advantageGained >= maxAdvantage || offset >= immediateSetbackThreshold)
                             && !isNoSetbackPermission()
@@ -106,7 +105,7 @@ public class OffsetHandler extends Check implements PostPredictionCheck {
     }
 
     @Override
-    public void onReload(ConfigManager config) {
+    public void onReload(@NotNull ConfigManager config) {
         setbackDecayMultiplier = config.getDoubleElse("Simulation.setback-decay-multiplier", 0.999);
         threshold = config.getDoubleElse("Simulation.threshold", 0.001);
         immediateSetbackThreshold = config.getDoubleElse("Simulation.immediate-setback-threshold", 0.1);

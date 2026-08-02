@@ -8,13 +8,17 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface CheckData {
+    String DEFAULT_DESCRIPTION = "No description provided";
+    double DEFAULT_DECAY = 0.05;
+    double DEFAULT_SETBACK = 25;
+
     String name();
 
     String alternativeName() default "UNKNOWN";
 
     String configName() default "DEFAULT";
 
-    String description() default "No description provided";
+    String description() default DEFAULT_DESCRIPTION;
 
     /**
      * Canonical cross-version identity. Dot-separated, lower snake-case
@@ -24,15 +28,9 @@ public @interface CheckData {
      */
     String stableKey() default "";
 
-    /**
-     * Binary verbose schema version. Zero means the check still writes
-     * legacy text verbose only.
-     */
-    int verboseVersion() default 0;
+    double decay() default DEFAULT_DECAY;
 
-    double decay() default 0.05;
-
-    double setback() default 25;
+    double setback() default DEFAULT_SETBACK;
 
     boolean experimental() default false;
 

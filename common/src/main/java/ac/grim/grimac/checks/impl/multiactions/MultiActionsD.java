@@ -1,6 +1,6 @@
 package ac.grim.grimac.checks.impl.multiactions;
 
-import ac.grim.grimac.api.storage.verbose.VerboseSchema;
+import ac.grim.grimac.api.storage.verbose.Verbose;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PacketCheck;
@@ -9,9 +9,9 @@ import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 
-@CheckData(name = "MultiActionsD", stableKey = "grim.multiactions.inventory_close_while_moving", verboseVersion = 1, description = "Closed inventory while moving")
+@CheckData(name = "MultiActionsD", stableKey = "grim.multiactions.inventory_close_while_moving", description = "Closed inventory while moving")
 public class MultiActionsD extends Check implements PacketCheck {
-    public static final VerboseSchema V = MultiActionsC.verboseSchema();
+    private static final Verbose V = Verbose.of("sprinting={bool}, sneaking={bool}, input={bool}");
 
     public MultiActionsD(GrimPlayer player) {
         super(player);
@@ -29,11 +29,11 @@ public class MultiActionsD extends Check implements PacketCheck {
 
         // The client force-closes the inventory while inside a nether portal, sending this close
         // window packet even while moving. This only happens on 1.12.2 and newer clients.
-        if (player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_12_2) && player.isInNetherPortal) return;
+        if (player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_12_2) && player.intersectedWithNetherPortal) return;
 
         // Don't cancel this packet, because it won't do anything except for making chests
         // look like they are still open (desynced),
         // and it can cause incompatibility issues with plugins
-        flagAndAlert(V.write(verbose()).bool(sprinting).bool(sneaking).bool(input));
+        flag(V.write(verbose()).bool(sprinting).bool(sneaking).bool(input));
     }
 }

@@ -270,8 +270,7 @@ jobs:
                   # Union of both shipped variants (mc-publish reads the multi-line
                   # scalar as OR). Keep in sync with fabric.mod.json depends.minecraft.
                   game-versions: |
-                      >=1.16.1 <26
-                      >=26.1.2 <26.2
+                      >=1.16.1 <=26.2
                   dependencies: 'fabric-api'
 
             #------------------------------------------------------------------
@@ -296,7 +295,7 @@ jobs:
                     paper
                     folia
                     purpur
-                  game-versions: '>=1.7 <=26.1.2'
+                  game-versions: '>=1.7 <=26.2'
 
             - name: Publish to API
               if: ${{ inputs.publish-artifacts == true && env.BUILD_UPDATE_TOKEN != '' && inputs.is-release-build == false }}

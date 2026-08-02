@@ -13,7 +13,7 @@ import com.github.retrooper.packetevents.util.Vector3d;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientVehicleMove;
 
-@CheckData(name = "CrashA", stableKey = "grim.crash.large_position")
+@CheckData(name = "CrashA", stableKey = "grim.crash.large_position", description = "Sent a position outside the valid world bounds")
 public class CrashA extends Check implements PacketCheck {
     private static final double HARD_CODED_BORDER = 2.9999999E7D;
 

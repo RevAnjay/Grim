@@ -38,7 +38,7 @@ public class BadPacketsM extends Check implements PacketCheck {
         }
 
         if (!player.compensatedEntities.self.isDead && !menu) {
-            flagAndAlert(); // don't cancel in case of a false positive
+            flag(); // don't cancel in case of a false positive
         }
 
         // the client closes the menu and reopens it if dead
@@ -100,10 +100,5 @@ public class BadPacketsM extends Check implements PacketCheck {
         if (player.packetStateData.showsDeathScreen) {
             menu = true;
         }
-    }
-
-    // via sends a respawn packet for pre-1.15 clients on 1.15+ servers with the immediate_respawn gamerule enabled
-    public void exemptVia() {
-        exempt++;
     }
 }

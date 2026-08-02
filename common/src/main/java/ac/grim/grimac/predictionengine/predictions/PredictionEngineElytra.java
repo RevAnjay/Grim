@@ -1,10 +1,12 @@
 package ac.grim.grimac.predictionengine.predictions;
 
 import ac.grim.grimac.player.GrimPlayer;
+import ac.grim.grimac.utils.data.IndexedVector3d;
 import ac.grim.grimac.utils.data.VectorData;
 import ac.grim.grimac.utils.math.GrimMath;
 import ac.grim.grimac.utils.math.Vector3dm;
 import ac.grim.grimac.utils.nmsutil.ReachUtils;
+import ac.grim.grimac.utils.nmsutil.StuckSpeed;
 import com.github.retrooper.packetevents.protocol.attribute.Attributes;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 
@@ -92,37 +94,29 @@ public class PredictionEngineElytra extends PredictionEngine {
         int maxFireworks = cappedFireworksForBoost(player);
         boolean hasFireworks = maxFireworks > 0 && (player.isGliding || player.wasGliding
                 || player.uncertaintyHandler.lastGlidingChange.hasOccurredSince(4));
-        boolean stuckSpeedActive = player.stuckSpeedMultiplier.getX() != 1.0
-                || player.stuckSpeedMultiplier.getY() != 1.0
-                || player.stuckSpeedMultiplier.getZ() != 1.0;
-
         // We must bruteforce Optifine ShitMath
         for (int shitmath = 0; shitmath <= 1; shitmath++, player.trigHandler.toggleShitMath()) {
             Vector3dm currentLook = ReachUtils.getLook(player, player.yaw, player.pitch);
             Vector3dm lastLook = hasFireworks ? ReachUtils.getLook(player, player.lastYaw, player.lastPitch) : null;
             Vector3dm[] fireworkLooks = hasFireworks ? new Vector3dm[]{currentLook, lastLook} : null;
 
-            for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
-                if (applyStuckSpeed == 0 && (player.isForceStuckSpeed() || !stuckSpeedActive)) break;
-                for (VectorData data : possibleVectors) {
-
-                    if (hasFireworks) {
-                        for (int numRockets = 0; numRockets <= maxFireworks; numRockets++) {
-                            if (numRockets == 0) {
-                                addElytraResult(results, player, data, data.vector.clone(), currentLook, applyStuckSpeed != 0);
-                            } else {
-                                for (Vector3dm fireworkLook : fireworkLooks) {
-                                    Vector3dm boosted = data.vector.clone();
-                                    for (int i = 0; i < numRockets; i++) {
-                                        applyFireworkBoost(boosted, fireworkLook);
-                                    }
-                                    addElytraResult(results, player, data, boosted, currentLook, applyStuckSpeed != 0);
+            for (VectorData data : possibleVectors) {
+                if (hasFireworks) {
+                    for (int numRockets = 0; numRockets <= maxFireworks; numRockets++) {
+                        if (numRockets == 0) {
+                            addElytraResult(results, player, data, data.vector.clone(), currentLook);
+                        } else {
+                            for (Vector3dm fireworkLook : fireworkLooks) {
+                                Vector3dm boosted = data.vector.clone();
+                                for (int i = 0; i < numRockets; i++) {
+                                    applyFireworkBoost(boosted, fireworkLook);
                                 }
+                                addElytraResult(results, player, data, boosted, currentLook);
                             }
                         }
-                    } else {
-                        addElytraResult(results, player, data, data.vector.clone(), currentLook, applyStuckSpeed != 0);
                     }
+                } else {
+                    addElytraResult(results, player, data, data.vector.clone(), currentLook);
                 }
             }
         }
@@ -130,15 +124,44 @@ public class PredictionEngineElytra extends PredictionEngine {
         return results;
     }
 
+    // Fork: one elytra candidate (optionally firework-boosted) routed through upstream's stuck-speed dispatch.
     private void addElytraResult(List<VectorData> results, GrimPlayer player,
-                                  VectorData data, Vector3dm inputVelocity,
-                                  Vector3dm lookVector, boolean applyStuckSpeed) {
-        Vector3dm elytraResult = getElytraMovement(player, inputVelocity, lookVector);
-        if (applyStuckSpeed) elytraResult.multiply(player.stuckSpeedMultiplier);
-        elytraResult.multiply(0.99F, 0.98F, 0.99F);
-        VectorData modified = data.returnNewModified(elytraResult, VectorData.VectorType.InputResult);
-        modified.input = ZERO_INPUT;
-        results.add(modified);
+                                 VectorData data, Vector3dm inputVelocity, Vector3dm lookVector) {
+        VectorData result = data.returnNewModified(getElytraMovement(player, inputVelocity, lookVector), VectorData.VectorType.InputResult);
+        result.input = ZERO_INPUT;
+
+        if (player.uncertaintyHandler.shouldSimulateStuckSpeed) {
+            // only simulate no stuck speed if player is leaving
+            if (player.uncertaintyHandler.stuckSpeedMultiplierMask == 0 || !player.isForceStuckSpeed())
+                addStuckSpeedResult(results, result, null);
+            addStuckSpeedResult(results, result, player.stuckSpeedMultiplier);
+            addPossibleStuckSpeedResults(player, results, result);
+        } else {
+            for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
+                if (applyStuckSpeed == 0 && player.isForceStuckSpeed()) break;
+
+                addStuckSpeedResult(results, result, applyStuckSpeed != 0 ? player.stuckSpeedMultiplier : null);
+            }
+        }
+    }
+
+    private void addPossibleStuckSpeedResults(GrimPlayer player, List<VectorData> results, VectorData result) {
+        int possibleStuckSpeedMultipliers = player.uncertaintyHandler.stuckSpeedMultiplierMask;
+        for (IndexedVector3d stuckSpeedMultiplier : StuckSpeed.POSSIBILITIES) {
+            if ((possibleStuckSpeedMultipliers & stuckSpeedMultiplier.getIndex()) != 0 && stuckSpeedMultiplier.getIndex() != player.stuckSpeedMultiplier.getIndex()) {
+                addStuckSpeedResult(results, result, stuckSpeedMultiplier);
+            }
+        }
+    }
+
+    private void addStuckSpeedResult(List<VectorData> results, VectorData result, IndexedVector3d stuckSpeedMultiplier) {
+        if (stuckSpeedMultiplier != null) {
+            result = result.returnNewModified(result.vector.clone().multiply(stuckSpeedMultiplier), VectorData.VectorType.StuckMultiplier);
+        }
+        result.stuckSpeedMultiplier = stuckSpeedMultiplier == null ? StuckSpeed.NONE : stuckSpeedMultiplier;
+
+        result = result.returnNewModified(result.vector.clone().multiply(0.99F, 0.98F, 0.99F), VectorData.VectorType.InputResult);
+        results.add(result);
     }
 
     // Yes... you can jump while using an elytra as long as you are on the ground

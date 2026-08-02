@@ -1,6 +1,6 @@
 package ac.grim.grimac.checks.impl.combat;
 
-import ac.grim.grimac.api.storage.verbose.VerboseSchema;
+import ac.grim.grimac.api.storage.verbose.Verbose;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PostPredictionCheck;
@@ -13,10 +13,9 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientIn
 
 import java.util.ArrayList;
 
-@CheckData(name = "MultiInteractB", stableKey = "grim.multiinteract.interact_at_position_changed", verboseVersion = 1, experimental = true)
+@CheckData(name = "MultiInteractB", stableKey = "grim.multiinteract.interact_at_position_changed", description = "Sent multiple entity interaction packets with different hit positions in one tick", experimental = true)
 public class MultiInteractB extends Check implements PostPredictionCheck {
-    public static final VerboseSchema V = VerboseSchema.of(
-            "posX:f64", "posY:f64", "posZ:f64", "lastPosX:f64", "lastPosY:f64", "lastPosZ:f64");
+    private static final Verbose V = Verbose.of("pos={f64}, {f64}, {f64}, lastPos={f64}, {f64}, {f64}");
 
     private final ArrayList<FlagData> flags = new ArrayList<>();
     private Vector3d lastPos;
@@ -37,7 +36,7 @@ public class MultiInteractB extends Check implements PostPredictionCheck {
 
             if (hasInteracted && !pos.equals(lastPos)) {
                 if (!player.canSkipTicks()) {
-                    if (flagAndAlert(V.write(verbose()).f64(pos.x).f64(pos.y).f64(pos.z).f64(lastPos.x).f64(lastPos.y).f64(lastPos.z))
+                    if (flag(V.write(verbose()).f64(pos.x).f64(pos.y).f64(pos.z).f64(lastPos.x).f64(lastPos.y).f64(lastPos.z))
                             && shouldModifyPackets()) {
                         event.setCancelled(true);
                         player.onPacketCancel();
@@ -62,7 +61,7 @@ public class MultiInteractB extends Check implements PostPredictionCheck {
 
         if (player.isTickingReliablyFor(3)) {
             for (FlagData data : flags) {
-                flagAndAlert(V.write(verbose())
+                flag(V.write(verbose())
                         .f64(data.posX()).f64(data.posY()).f64(data.posZ())
                         .f64(data.lastPosX()).f64(data.lastPosY()).f64(data.lastPosZ()));
             }
@@ -77,6 +76,5 @@ public class MultiInteractB extends Check implements PostPredictionCheck {
             double posZ,
             double lastPosX,
             double lastPosY,
-            double lastPosZ) {
-    }
+            double lastPosZ) {}
 }

@@ -166,7 +166,7 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
                 player.packetStateData.setSlowedByUsingItem(false);
                 player.packetStateData.packetPlayerOnGround = false; // If somewhere else pulls last ground to fix other issues
                 player.packetStateData.lastClaimedPosition = new Vector3d();
-                player.filterMojangStupidityOnMojangStupidity = new Vector3d();
+                player.filterMojangStupidityOnMojangStupidity.zero();
 
                 player.checkManager.getPreViaPacketCheck(BadPacketsM.class).onRespawn();
 
@@ -203,6 +203,7 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
                     player.compensatedWorld.activePistons.clear();
                     player.compensatedWorld.openShulkerBoxes.clear();
                     player.compensatedWorld.chunks.clear();
+                    player.compensatedGeysers.clear();
                     player.compensatedWorld.isRaining = false;
                     player.checkManager.getBlockPlaceCheck(BadPacketsH.class).onWorldChange();
                 }

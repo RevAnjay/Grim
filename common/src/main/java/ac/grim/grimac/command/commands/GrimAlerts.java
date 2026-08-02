@@ -33,15 +33,15 @@ public class GrimAlerts implements BuildableCommand {
         String targetFilter = context.getOrDefault("player", null);
 
         if (sender.isPlayer()) {
-            PlatformPlayer p = Objects.requireNonNull(context.sender().getPlatformPlayer());
+            PlatformPlayer player = Objects.requireNonNull(context.sender().getPlatformPlayer(), "player");
             AlertManagerImpl am = GrimAPI.INSTANCE.getAlertManager();
-            boolean newState = !am.hasAlertsEnabled(p);
-            am.setAlertsEnabled(p, newState, false);
+            boolean newState = !am.hasAlertsEnabled(player);
+            am.setAlertsEnabled(player, newState, false);
             GrimAPI.INSTANCE.getDataStoreLifecycle().playerToggleStore()
-                    .applyUserToggle(p.getUniqueId(), PlayerToggleStore.KEY_ALERTS, newState);
+                    .applyUserToggle(player.getUniqueId(), PlayerToggleStore.KEY_ALERTS, newState);
 
             if (newState) {
-                am.setPlayerFilter(p, targetFilter);
+                am.setPlayerFilter(player, targetFilter);
                 if (targetFilter != null) {
                     String msg = GrimAPI.INSTANCE.getConfigManager().getConfig()
                             .getStringElse("alerts-filter", "%prefix% &fFiltering alerts for: &b%player%")
@@ -49,7 +49,7 @@ public class GrimAlerts implements BuildableCommand {
                     sender.sendMessage(MessageUtil.miniMessage(MessageUtil.replacePlaceholders(sender, msg)));
                 }
             } else {
-                am.setPlayerFilter(p, null);
+                am.setPlayerFilter(player, null);
             }
         } else if (sender.isConsole()) {
             GrimAPI.INSTANCE.getAlertManager().toggleConsoleAlerts();

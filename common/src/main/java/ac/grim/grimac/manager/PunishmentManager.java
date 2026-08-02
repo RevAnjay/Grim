@@ -6,7 +6,6 @@ import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.api.config.ConfigReloadable;
 import ac.grim.grimac.api.event.events.CommandExecuteEvent;
 import ac.grim.grimac.checks.Check;
-import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.events.packets.ProxyAlertMessenger;
 import ac.grim.grimac.platform.api.player.PlatformPlayer;
 import ac.grim.grimac.player.GrimPlayer;
@@ -16,20 +15,19 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Supplier;
 
 public class PunishmentManager implements ConfigReloadable {
+    private static final CommandExecuteEvent.Channel COMMAND_CHANNEL = GrimAPI.INSTANCE.getEventBus().get(CommandExecuteEvent.class);
     private final GrimPlayer player;
     private final List<PunishGroup> groups = new ArrayList<>();
     private String experimentalSymbol = "*";
     private String alertString;
     private boolean testMode;
     private String proxyAlertString = "";
-    private static final CommandExecuteEvent.Channel COMMAND_CHANNEL = GrimAPI.INSTANCE.getEventBus().get(CommandExecuteEvent.class);
 
     public PunishmentManager(GrimPlayer player) {
         this.player = player;
@@ -39,9 +37,19 @@ public class PunishmentManager implements ConfigReloadable {
     public void reload(ConfigManager config) {
         List<String> punish = config.getStringListElse("Punishments", new ArrayList<>());
         experimentalSymbol = config.getStringElse("experimental-symbol", "*");
-        alertString = config.getStringElse("alerts-format", "%prefix% &f%player% &bfailed &f%check_name% &f(x&c%vl%&f) &7%verbose%");
+
+        alertString = config.getStringElse(
+                "alerts-format",
+                "%prefix% &f%player% &bfailed <hover:show_text:\"&b%check_name%%experimental%\\n&8Description: &f%description%\">&f%check_name%%experimental%</hover> &f(x&c%vl%&f) &7%verbose%"
+        );
+
         testMode = config.getBooleanElse("test-mode", false);
-        proxyAlertString = config.getStringElse("alerts-format-proxy", "%prefix% &f[&cproxy&f] &f%player% &bfailed &f%check_name% &f(x&c%vl%&f) &7%verbose%");
+
+        proxyAlertString = config.getStringElse(
+                "alerts-format-proxy",
+                "%prefix% &f[&cproxy&f] &f%player% &bfailed <hover:show_text:\"&b%check_name%%experimental%\\n&8Description: &f%description%\">&f%check_name%%experimental%</hover> &f(x&c%vl%&f) &7%verbose%"
+        );
+
         try {
             groups.clear();
 
@@ -75,11 +83,13 @@ public class PunishmentManager implements ConfigReloadable {
                                 excluded.add(check);
                             } else {
                                 checksList.add(check);
-                                check.setEnabled(true);
                             }
                         }
                     }
                     for (AbstractCheck check : excluded) checksList.remove(check);
+                }
+                for (AbstractCheck check : checksList) {
+                    check.setEnabled(true);
                 }
 
                 for (String command : commands) {
@@ -114,7 +124,8 @@ public class PunishmentManager implements ConfigReloadable {
                 .replace("%experimental%", check.isExperimental() ? experimentalSymbol : "")
                 .replace("%vl%", Integer.toString(vl))
                 .replace("%description%", check.getDescription())
-        ).replace("%verbose%", MiniMessage.miniMessage().escapeTags(verbose));
+                .replace("%stable_key%", check.getStableKey())
+        ).replace("%verbose%", MessageUtil.miniMessageSafe(verbose));
     }
 
     public boolean handleAlert(GrimPlayer player, String verbose, Check check) {
@@ -159,8 +170,8 @@ public class PunishmentManager implements ConfigReloadable {
                             switch (command.command) {
                                 case "[webhook]" -> GrimAPI.INSTANCE.getDiscordManager().sendAlert(player, renderedVerbose, check.getDisplayName(), vl);
                                 case "[log]" -> {
-                                    // Binary-verbose checks store from flag(VerboseBuf); avoid an extra legacy text row.
-                                    if (!usesStructuredVerbose(check)) {
+                                    // Binary flags already stored a row; avoid an extra legacy text row.
+                                    if (!check.isLastFlagStoredBinaryVerbose()) {
                                         String verboseWithoutGl = renderedVerbose.replaceAll(" /gl .*", "");
                                         GrimAPI.INSTANCE.getDataStoreLifecycle().liveWriteHooks()
                                                 .recordFlagFromCheck(player, check, vl, verboseWithoutGl);
@@ -207,11 +218,6 @@ public class PunishmentManager implements ConfigReloadable {
         } catch (Throwable ignored) {
             return "";
         }
-    }
-
-    private static boolean usesStructuredVerbose(Check check) {
-        CheckData data = check.getClass().getAnnotation(CheckData.class);
-        return data != null && data.verboseVersion() >= 1;
     }
 
     private static void advanceBoundary(ParsedCommand command, int violationCount) {
