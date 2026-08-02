@@ -13,6 +13,7 @@ public class CommonGrimArguments {
 
     public final static SystemArgument<Boolean> KICK_ON_TRANSACTION_ERRORS = FACTORY.create(string("KickOnTransactionTaskErrors", true));
     public final static SystemArgument<String> API_URL = FACTORY.create(string("APIUrl", "https://api.grim.ac/v1/server/"));
+    public final static SystemArgument<String> RELEASES_URL = FACTORY.create(string("ReleasesUrl", "https://api.github.com/repos/KaelusAI/GroundedGrim/releases/latest"));
     public final static SystemArgument<String> PASTE_URL = FACTORY.create(string("PasteUrl", "https://paste.grim.ac/"));
     public final static SystemArgument<Platform> PLATFORM_OVERRIDE = FACTORY.create(platform("PlatformOverride"));
     public final static SystemArgument<Integer> URL_TIMEOUT = FACTORY.create(range("UrlTimeout", 10000, 1000, 60000));

@@ -53,16 +53,14 @@ public class GrimVersion implements BuildableCommand {
         GrimAPI.INSTANCE.getScheduler().getAsyncScheduler().runNow(GrimAPI.INSTANCE.getGrimPlugin(), () -> checkForUpdates(sender));
     }
 
-    // Using UserAgent format recommended by https://docs.modrinth.com/api/
     @SuppressWarnings("deprecation")
     private static void checkForUpdates(Sender sender) {
         try {
-            //
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(CommonGrimArguments.API_URL.value() + "updates"))
+                    .uri(URI.create(CommonGrimArguments.RELEASES_URL.value()))
                     .GET()
-                    .header("User-Agent", "GrimAC/" + GrimAPI.INSTANCE.getExternalAPI().getGrimVersion())
-                    .header("Content-Type", "application/json")
+                    .header("User-Agent", "GroundedGrim/" + GrimAPI.INSTANCE.getExternalAPI().getGrimVersion())
+                    .header("Accept", "application/vnd.github+json")
                     .timeout(Duration.of(CommonGrimArguments.URL_TIMEOUT.value(), ChronoUnit.MILLIS))
                     .build();
 
@@ -72,7 +70,7 @@ public class GrimVersion implements BuildableCommand {
                 Component msg = updateMessage.get();
                 sender.sendMessage(Objects.requireNonNullElseGet(msg, () -> Component.text()
                         .append(MessageUtil.miniMessage("%prefix%"))
-                        .append(Component.text(" Failed to check latest GrimAC version. Update server responded with status code: ")
+                        .append(Component.text(" Failed to check latest GroundedGrim version. Update server responded with status code: ")
                                 .color(NamedTextColor.YELLOW))
                         .append(Component.text(statusCode)
                                 .color(getColorForStatusCode(statusCode))
@@ -82,24 +80,20 @@ public class GrimVersion implements BuildableCommand {
             }
             // Using old JsonParser method, as old versions of Gson don't include the static one
             JsonObject object = new JsonParser().parse(response.body()).getAsJsonObject();
-            String downloadPage = getJsonString(object, "download_page", "Unknown");
-            String latest = getJsonString(object, "latest_version", "Unknown");
+            String downloadPage = getJsonString(object, "html_url", "https://github.com/KaelusAI/GroundedGrim/releases");
+            String latest = parseReleaseVersion(object);
             @Nullable String warning = getJsonString(object, "warning", null);
-            // allow status to be overridden if provided
-            Status status;
-            if (object.has("status")) {
-                status = Status.getStatus(object.get("status").getAsString());
-            } else {
-                status = Status.SemVer.getVersionStatus(GrimAPI.INSTANCE.getExternalAPI().getGrimVersion(), latest);
-            }
+            final String current = GrimAPI.INSTANCE.getExternalAPI().getGrimVersion();
+            Status status = "Unknown".equals(latest) ? Status.UNKNOWN
+                    : latest.equals(current) ? Status.UPDATED : Status.OUTDATED;
             //
             Component msg = switch (status) {
                 case AHEAD ->
-                        Component.text("You are using a development version of GrimAC").color(NamedTextColor.LIGHT_PURPLE);
+                        Component.text("You are using a development version of GroundedGrim").color(NamedTextColor.LIGHT_PURPLE);
                 case UPDATED ->
-                        Component.text("You are using the latest version of GrimAC").color(NamedTextColor.GREEN);
+                        Component.text("You are using the latest version of GroundedGrim").color(NamedTextColor.GREEN);
                 case OUTDATED -> Component.text()
-                        .append(Component.text("New GrimAC version found!").color(NamedTextColor.AQUA))
+                        .append(Component.text("New GroundedGrim version found!").color(NamedTextColor.AQUA))
                         .append(Component.text(" Version ").color(NamedTextColor.GRAY))
                         .append(Component.text(latest).color(NamedTextColor.GRAY).decorate(TextDecoration.ITALIC))
                         .append(Component.text(" is available to be downloaded here: ").color(NamedTextColor.GRAY))
@@ -107,7 +101,7 @@ public class GrimVersion implements BuildableCommand {
                                 .clickEvent(ClickEvent.openUrl(downloadPage)))
                         .build();
                 case UNKNOWN ->
-                        Component.text("You are using an unknown GrimAC version.").color(NamedTextColor.RED);
+                        Component.text("You are using an unknown GroundedGrim version.").color(NamedTextColor.RED);
             };
             // in case of a critical exploit that requires attention, allow us to provide a warning
             if (warning != null && !warning.isBlank()) {
@@ -117,12 +111,19 @@ public class GrimVersion implements BuildableCommand {
             sender.sendMessage(msg);
         } catch (Exception e) {
             sender.sendMessage(Component.text("Failed to check latest version.").color(NamedTextColor.RED));
-            LogUtil.error("Failed to check latest GrimAC version.", e);
+            LogUtil.error("Failed to check latest GroundedGrim version.", e);
         }
     }
 
     private static String getJsonString(JsonObject object, String key, String defaultValue) {
         return object.has(key) ? object.get(key).getAsString() : defaultValue;
+    }
+
+    private static String parseReleaseVersion(JsonObject release) {
+        String name = getJsonString(release, "name", "").trim();
+        int lastSpace = name.lastIndexOf(' ');
+        if (lastSpace >= 0) name = name.substring(lastSpace + 1).trim();
+        return name.isEmpty() ? getJsonString(release, "tag_name", "Unknown") : name;
     }
 
     private static NamedTextColor getColorForStatusCode(int code) {
