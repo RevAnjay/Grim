@@ -1,0 +1,19 @@
+# Nicknames used for the fake staff entries when fake-staff-random-names is off. Latin letters, digits
+# and underscores only, 3 to 16 characters - cheat clients ignore anything else.
+spoof-staff-names:
+    - "Frostbyte"
+    - "Vexley"
+    - "Duskwave"
+    - "Kaelum"
+    - "Riftly"
+    - "Solaris"
+    - "Nyverin"
+    - "Ashfell"
+    - "Corwyn"
+    - "Halbrook"
+    - "Draventh"
+    - "Lumaris"
+    - "Sevrick"
+    - "Rynmont"
+    - "Krystal_"
+    - "Mirevex"

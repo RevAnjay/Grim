@@ -1,0 +1,5 @@
+# Names randomly picked for ground items when replace-item-names is on.
+spoof-item-names:
+    - "Item"
+    - "Dropped Item"
+    - "Loot"

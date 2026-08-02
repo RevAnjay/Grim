@@ -36,6 +36,16 @@ public interface PlatformPlayer extends GrimEntity, OfflinePlatformPlayer {
 
     boolean isExternalPlayer();
 
+    // Vanish plugins hide staff through the platform's own visibility API. Platforms without one see everyone.
+    default boolean canSee(PlatformPlayer other) {
+        return true;
+    }
+
+    // Negative when the platform cannot tell, which callers must treat as "do not know"
+    default double getHealth() {
+        return -1;
+    }
+
     void sendPluginMessage(String channelName, byte[] byteArray);
 
     Sender getSender();

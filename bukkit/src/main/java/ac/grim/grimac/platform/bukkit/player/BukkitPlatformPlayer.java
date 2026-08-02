@@ -161,6 +161,16 @@ public class BukkitPlatformPlayer extends BukkitGrimEntity implements PlatformPl
     }
 
     @Override
+    public boolean canSee(PlatformPlayer other) {
+        return !(other instanceof BukkitPlatformPlayer bukkit) || this.bukkitPlayer.canSee(bukkit.bukkitPlayer);
+    }
+
+    @Override
+    public double getHealth() {
+        return bukkitPlayer.getHealth();
+    }
+
+    @Override
     public void sendPluginMessage(String channelName, byte[] byteArray) {
         this.bukkitPlayer.sendPluginMessage(GrimACBukkitLoaderPlugin.LOADER, channelName, byteArray);
     }

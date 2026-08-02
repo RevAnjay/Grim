@@ -1,0 +1,18 @@
+# Prefixes hung on the fake staff entries. Each line must contain a rank word cheats look for -
+# admin, moder, helper, staff, curator, support, стажер, сотрудник, помощник and the like - otherwise
+# their staff lists skip the entry. Colours are MiniMessage or &-codes, parsed only with parse-colors on.
+spoof-staff-prefixes:
+    - "Admin "
+    - "Админ "
+    - "Moder "
+    - "Модератор "
+    - "Helper "
+    - "Хелпер "
+    - "Curator "
+    - "Куратор "
+    - "Staff "
+    - "Сотрудник "
+    - "Помощник "
+    - "Стажер "
+    - "Стажёр "
+    - "Support "

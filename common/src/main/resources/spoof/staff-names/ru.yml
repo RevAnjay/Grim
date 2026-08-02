@@ -1,0 +1,19 @@
+# Ники для фейковых записей персонала, когда fake-staff-random-names выключен. Только латиница, цифры
+# и подчёркивания, от 3 до 16 символов - всё остальное читы игнорируют.
+spoof-staff-names:
+    - "Frostbyte"
+    - "Vexley"
+    - "Duskwave"
+    - "Kaelum"
+    - "Riftly"
+    - "Solaris"
+    - "Nyverin"
+    - "Ashfell"
+    - "Corwyn"
+    - "Halbrook"
+    - "Draventh"
+    - "Lumaris"
+    - "Sevrick"
+    - "Rynmont"
+    - "Krystal_"
+    - "Mirevex"

@@ -75,6 +75,11 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
             // keys are namespaced under `database:` / `<id>:` wrappers so
             // they don't collide with config.yml / discord.yml / each other
             // when Configuralize merges everything into one keyspace.
+            config.addSource(GrimAPI.class, "spoof/settings", getConfigFile("spoof/settings.yml"));
+            config.addSource(GrimAPI.class, "spoof/item-names", getConfigFile("spoof/item-names.yml"));
+            config.addSource(GrimAPI.class, "spoof/mob-names", getConfigFile("spoof/mob-names.yml"));
+            config.addSource(GrimAPI.class, "spoof/staff-names", getConfigFile("spoof/staff-names.yml"));
+            config.addSource(GrimAPI.class, "spoof/staff-prefixes", getConfigFile("spoof/staff-prefixes.yml"));
             config.addSource(GrimAPI.class, "database", getConfigFile("database.yml"));
             for (String id : BACKEND_IDS) {
                 config.addSource(GrimAPI.class, "databases/" + id, getConfigFile("databases/" + id + ".yml"));

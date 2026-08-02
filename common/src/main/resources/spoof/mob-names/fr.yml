@@ -1,0 +1,5 @@
+# Names randomly picked for mobs when replace-mob-names is on.
+spoof-mob-names:
+    - "Mob"
+    - "Entity"
+    - "Creature"

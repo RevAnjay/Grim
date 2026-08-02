@@ -7,12 +7,23 @@ import ac.grim.grimac.platform.api.sender.Sender;
 import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.ScoreboardManager;
 
 public class BukkitPlatformServer implements PlatformServer {
 
     @Override
     public String getPlatformImplementationString() {
         return Bukkit.getVersion();
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public String getObjectiveCriterion(String name) {
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager == null) return null;
+        Objective objective = manager.getMainScoreboard().getObjective(name);
+        return objective == null ? null : objective.getCriteria();
     }
 
     @Override

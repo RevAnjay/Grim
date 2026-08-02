@@ -1,0 +1,93 @@
+# Hides what the vanilla client never shows but cheats read from packets. Everything is off by default.
+spoof:
+    # Hide other players' health.
+    entity-health: false
+    # What to report instead.
+    health-value: 20.0
+    # How far below it an individual player's value can sit.
+    health-spread: 6.0
+    # Drop the reported health when the target is hit, and refill it instead of reaching zero.
+    health-fake-damage: false
+    # Hide their max health too.
+    max-health: false
+    # Report the same value in a scoreboard health objective. Whatever it shows below names changes too.
+    health-scoreboard: false
+    # Objective names whose values to hide as health too.
+    health-scoreboard-objectives: []
+    # Hide unknown objectives too, until they prove they are not about health.
+    health-scoreboard-strict: false
+    # Hide other players' ping.
+    entity-ping: false
+    # What to report instead.
+    ping-value: 100
+    # How far below it an individual player's value can sit.
+    ping-spread: 60
+    # Round the real ping to the tab bar steps when the swap is off.
+    ping-round: false
+    # Hide absorption.
+    absorption: false
+    # Hide mob health. Wolves, iron golems and withers are left alone, theirs shows on the model.
+    mob-health: false
+    # Hide other players' speed, attack damage and armour.
+    other-attributes: false
+
+    # Hide which potions other players are on.
+    potion-effects: false
+    # Keep potion particles. Without them an invisible player has no tell left.
+    keep-particles: true
+    # Particle colour, decimal RGB.
+    particle-color: 3694534
+
+    # Parse colours in the replacement names.
+    parse-colors: false
+    # Replace hidden names with a line from spoof/item-names.yml instead of removing them.
+    replace-item-names: false
+    # Hide names and lore on items lying on the ground.
+    ground-item-names: false
+    # Give items with no name one from spoof/item-names.yml.
+    name-plain-items: false
+    # Hide names and lore on armour and held items.
+    equipment-names: false
+    # Give those items a name too when they have none.
+    name-plain-equipment: false
+    # Hide enchantments by swapping them for one - the glint stays.
+    strip-enchantments: false
+    # Hide which potion an item is. Bottles lose their colour.
+    potion-items: false
+    # Hide wear. An elytra held in hand always looks intact.
+    equipment-durability: false
+    # Hide the stack size.
+    equipment-count: false
+    # Replace the server software name the client shows in F3.
+    server-brand: false
+    # What to report instead.
+    server-brand-value: vanilla
+    # Hide the item attribute modifiers a plugin set.
+    item-attributes: false
+
+    # Hide custom names of mobs whose tag is not shown.
+    hidden-mob-names: false
+    # Replace them with a line from spoof/mob-names.yml instead of removing them.
+    replace-mob-names: false
+    # Give unnamed mobs a name. Costs one packet per mob per viewer.
+    name-plain-mobs: false
+
+    # Report one game mode for every other player instead of the real one.
+    entity-gamemode: false
+    # Which one: survival, creative, adventure, spectator.
+    gamemode-value: survival
+    # Report spectators as survival in the tab list.
+    spectator-gamemode: false
+    # Drop players a viewer cannot see out of scoreboard teams.
+    vanished-team-entries: false
+
+    # Add fake staff. Names and prefixes live in the spoof folder.
+    fake-staff: false
+    # How many at a time: a random number within these bounds.
+    fake-staff-count:
+        min: 3
+        max: 6
+    # Seconds between sets.
+    fake-staff-refresh: 300
+    # Make up nicknames instead of using spoof/staff-names.yml.
+    fake-staff-random-names: true

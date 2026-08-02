@@ -1,5 +1,6 @@
 package ac.grim.grimac.manager.init.start;
 
+import ac.grim.grimac.GrimAPI;
 import ac.grim.grimac.events.packets.*;
 import ac.grim.grimac.events.packets.worldreader.BasePacketWorldReader;
 import ac.grim.grimac.events.packets.worldreader.PacketWorldReaderEight;
@@ -45,6 +46,11 @@ public class PacketManager implements StartableInitable {
 
         PacketEvents.getAPI().getEventManager().registerListener(new ProxyAlertMessenger());
         PacketEvents.getAPI().getEventManager().registerListener(new PacketHidePlayerInfo());
+        PacketInfoSpoof.reload(GrimAPI.INSTANCE.getConfigManager().getConfig());
+        PacketEvents.getAPI().getEventManager().registerListener(new PacketInfoSpoof());
+        PacketStaffListSpoof.reload(GrimAPI.INSTANCE.getConfigManager().getConfig());
+        PacketEvents.getAPI().getEventManager().registerListener(new PacketStaffListSpoof());
+        PacketStaffListSpoof.start();
 
         PacketEvents.getAPI().init();
     }

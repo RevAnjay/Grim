@@ -8,6 +8,8 @@ import ac.grim.grimac.api.event.EventBus;
 import ac.grim.grimac.api.event.events.GrimReloadEvent;
 import ac.grim.grimac.api.plugin.GrimPlugin;
 import ac.grim.grimac.api.storage.backend.BackendRegistry;
+import ac.grim.grimac.events.packets.PacketInfoSpoof;
+import ac.grim.grimac.events.packets.PacketStaffListSpoof;
 import ac.grim.grimac.manager.config.ConfigManagerFileImpl;
 import ac.grim.grimac.manager.init.start.StartableInitable;
 import ac.grim.grimac.player.GrimPlayer;
@@ -224,6 +226,8 @@ public class GrimExternalAPI implements GrimAbstractAPI, ConfigReloadObserver, S
         GrimAPI.INSTANCE.getAlertManager().reload(configManager);
         GrimAPI.INSTANCE.getDiscordManager().reload();
         GrimAPI.INSTANCE.getSpectateManager().reload();
+        PacketInfoSpoof.reload(configManager);
+        PacketStaffListSpoof.reload(configManager);
         // First-load guard: load() calls reload() before start() runs, so this fires once with started=false before the datastore exists. Subsequent /grim reload calls see started=true and proceed (including disabled→enabled flips — DataStoreLifecycle.reload() re-evaluates builder.enabled() each time).
         if (!started) return;
         // Hot-reload picks up backend swaps + routing + connection-pool edits without a server restart. Drains in-flight writes for shutdown-drain-timeout-ms then drops; brief mid-reload unavailability is the tradeoff.
