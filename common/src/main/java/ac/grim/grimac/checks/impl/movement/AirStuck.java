@@ -65,7 +65,6 @@ public class AirStuck extends Check implements PacketCheck {
                     anchorY = y;
                     anchorZ = z;
                 }
-                return;
             }
         }
 
