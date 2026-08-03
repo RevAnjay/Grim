@@ -14,7 +14,9 @@ import java.util.concurrent.CompletableFuture;
 public class PaperUtils {
     public static final boolean PAPER = ReflectionUtils.hasClass("com.destroystokyo.paper.PaperConfig")
             || ReflectionUtils.hasClass("io.papermc.paper.configuration.Configuration");
-    public static final boolean HAS_TELEPORT_ASYNC = ReflectionUtils.hasMethod(Entity.class, "teleportAsync");
+    // With no parameter types this asks for a zero-argument teleportAsync, which no Paper build has, so
+    // every server fell through to the sync teleport - and that one throws outright under region threading.
+    public static final boolean HAS_TELEPORT_ASYNC = ReflectionUtils.hasMethod(Entity.class, "teleportAsync", Location.class);
     private static final Class<?> SERVER_TICK_END_EVENT_CLASS = ReflectionUtils.getClass("com.destroystokyo.paper.event.server.ServerTickEndEvent");
     public static final boolean HAS_TICK_END_EVENT = SERVER_TICK_END_EVENT_CLASS != null;
 
