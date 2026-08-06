@@ -8,7 +8,7 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientCl
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerCloseWindow;
 import org.jetbrains.annotations.MustBeInvokedByOverriders;
 
-public class InventoryCheck extends BlockPlaceCheck implements PacketCheck {
+public class InventoryCheck extends BlockPlaceCheck implements PacketReceiveListener {
     // Impossible transaction ID
     protected static final long NONE = Long.MAX_VALUE;
 

@@ -2,6 +2,7 @@ package ac.grim.grimac.checks.impl.inventory;
 
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.InventoryCheck;
+import ac.grim.grimac.checks.type.PostPredictionListener;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.update.PredictionComplete;
 import ac.grim.grimac.utils.data.VectorData;
@@ -11,7 +12,7 @@ import ac.grim.grimac.utils.data.VehicleData;
 import java.util.StringJoiner;
 
 @CheckData(name = "InventoryD", setback = 1, decay = 0.25)
-public class InventoryD extends InventoryCheck {
+public class InventoryD extends InventoryCheck implements PostPredictionListener {
     private int horseJumpVerbose;
 
     public InventoryD(GrimPlayer player) {

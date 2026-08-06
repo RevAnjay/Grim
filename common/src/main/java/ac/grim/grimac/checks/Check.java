@@ -105,6 +105,14 @@ public class Check extends GrimProcessor implements AbstractCheck {
                 && !exemptPermission;
     }
 
+    /**
+     * Evaluated once when CheckManager builds the dispatch arrays.
+     * Implementations must only depend on immutable connection properties.
+     */
+    public boolean isApplicable() {
+        return true;
+    }
+
     public final void updatePermissions() {
         if (configName == null) return;
         final String id = configName.toLowerCase();

@@ -2,7 +2,7 @@ package ac.grim.grimac.checks.impl.crash;
 
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
@@ -15,7 +15,7 @@ import static com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayC
 // its position), so a flood of them is cheap-but-unbounded. A legit client emits at most one per real
 // tick; cap them at vanilla's own per-tick move ceiling (5) and let the surplus feed the spam kick.
 @CheckData(name = "CrashJ", stableKey = "grim.crash.duplicate_flood")
-public class CrashJ extends Check implements PacketCheck {
+public class CrashJ extends Check implements PacketReceiveListener {
     private static final int MAX_DUPLICATES_BETWEEN_TICKS = 5;
     private int duplicates = 0; // netty-thread only
 

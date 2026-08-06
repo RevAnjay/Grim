@@ -3,7 +3,8 @@ package ac.grim.grimac.checks.impl.misc;
 import ac.grim.grimac.GrimAPI;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
+import ac.grim.grimac.checks.type.PacketSendListener;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.LogUtil;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
@@ -21,7 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
 @CheckData(name = "PacketLogger", configName = "PacketLogger", decay = 0, setback = -1)
-public class PacketLogger extends Check implements PacketCheck {
+public class PacketLogger extends Check implements PacketReceiveListener, PacketSendListener {
 
     public enum Filter { MOVEMENT, COMBAT, ABILITIES, ALL }
     public enum Side { C2S, S2C, BOTH }

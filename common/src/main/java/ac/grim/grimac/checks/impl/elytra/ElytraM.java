@@ -2,14 +2,14 @@ package ac.grim.grimac.checks.impl.elytra;
 
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PostPredictionCheck;
+import ac.grim.grimac.checks.type.PostPredictionListener;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.update.PredictionComplete;
 import ac.grim.grimac.utils.nmsutil.BlockUtil;
 import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes;
 
 @CheckData(name = "ElytraM", description = "Checks for velocity discontinuities during elytra flight", experimental = true, decay = 0.05, setback = 5)
-public class ElytraM extends Check implements PostPredictionCheck {
+public class ElytraM extends Check implements PostPredictionListener {
 
     private double lastDeltaX, lastDeltaY, lastDeltaZ;
     private double lastDeltaXZ;

@@ -313,7 +313,7 @@ public class CompensatedWorld implements PacketWorld {
             // Here, where both states are in scope: a resync that rewrites the same block is not a change,
             // and counting it would hand out the wall hit exemption for free.
             if (!previousState.equals(newState)) {
-                player.checkManager.getPacketCheck(Reach.class).handleBlockChange(new Vector3i(x, y, z));
+                player.checkManager.getCheck(Reach.class).handleBlockChange(new Vector3i(x, y, z));
             }
 
             chunk.set(x & 0xF, offsetY & 0xF, z & 0xF, combinedID);

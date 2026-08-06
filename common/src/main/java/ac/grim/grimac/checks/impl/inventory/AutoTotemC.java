@@ -3,7 +3,8 @@ package ac.grim.grimac.checks.impl.inventory;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
+import ac.grim.grimac.checks.type.PacketSendListener;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -17,7 +18,7 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEn
 // Inspired by TotemGuard by Bram1903 (https://github.com/Bram1903/TotemGuard)
 // Detects suspicious re-totem packet sequence after totem pop
 @CheckData(name = "AutoTotemC", configName = "AutoTotem", description = "Checks for suspicious swap sequence after totem pop", decay = 0.025)
-public class AutoTotemC extends Check implements PacketCheck {
+public class AutoTotemC extends Check implements PacketReceiveListener, PacketSendListener {
 
     private int totemPopTransaction = -1;
     private boolean popConfirmed = false;

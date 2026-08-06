@@ -2,7 +2,7 @@ package ac.grim.grimac.checks.impl.elytra;
 
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
@@ -10,7 +10,7 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientEn
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying;
 
 @CheckData(name = "ElytraN", description = "Detects rapid elytra reactivation without position data", experimental = true, setback = 1)
-public class ElytraN extends Check implements PacketCheck {
+public class ElytraN extends Check implements PacketReceiveListener {
 
     private long lastPositionTime;
     private int activationsWithoutPosition;

@@ -3,7 +3,7 @@ package ac.grim.grimac.checks.impl.combat;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.utils.anticheat.LogUtil;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.collisions.datatypes.SimpleCollisionBox;
@@ -18,7 +18,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 
 @CheckData(name = "BehaviorD", configName = "Behavior", description = "Checks for attacking without looking at target")
-public class BehaviorD extends Check implements PacketCheck {
+public class BehaviorD extends Check implements PacketReceiveListener {
 
     private double angleThreshold = 45.0;
     private boolean playersOnly = true;

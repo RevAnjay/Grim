@@ -2,7 +2,7 @@ package ac.grim.grimac.checks.impl.combat;
 
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.data.packetentity.PacketEntity;
@@ -14,7 +14,7 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientIn
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying;
 
 @CheckData(name = "TriggerA", configName = "Trigger", description = "Checks for inhuman attack interval consistency", decay = 0.05)
-public class TriggerA extends Check implements PacketCheck {
+public class TriggerA extends Check implements PacketReceiveListener {
 
     private boolean playersOnly = true;
     private boolean debug = false;

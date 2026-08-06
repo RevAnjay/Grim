@@ -3,7 +3,7 @@ package ac.grim.grimac.checks.impl.elytra;
 import ac.grim.grimac.GrimAPI;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
@@ -14,7 +14,7 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPl
 // Original check by DarknessAC
 // https://github.com/1hendex/DarknessAC
 @CheckData(name = "ElytraJ", description = "Checks for invalid elytra accelerations")
-public class ElytraJ extends Check implements PacketCheck {
+public class ElytraJ extends Check implements PacketReceiveListener {
 
     private double buffer = 0;
     private double deltaY = 0;

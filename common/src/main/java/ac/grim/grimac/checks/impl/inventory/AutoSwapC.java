@@ -3,7 +3,8 @@ package ac.grim.grimac.checks.impl.inventory;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
+import ac.grim.grimac.checks.type.PacketSendListener;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -12,7 +13,7 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientCl
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying;
 
 @CheckData(name = "AutoSwapC", configName = "AutoSwap", description = "Checks for isolated inventory swap without tick", decay = 0.05)
-public class AutoSwapC extends Check implements PacketCheck {
+public class AutoSwapC extends Check implements PacketReceiveListener, PacketSendListener {
 
     private int clickCountThisSession = 0;
     private int pendingSwapSlot = -1;

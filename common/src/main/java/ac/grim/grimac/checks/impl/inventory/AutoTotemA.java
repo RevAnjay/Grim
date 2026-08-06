@@ -3,7 +3,8 @@ package ac.grim.grimac.checks.impl.inventory;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
+import ac.grim.grimac.checks.type.PacketSendListener;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -14,7 +15,7 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPl
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityStatus;
 
 @CheckData(name = "AutoTotemA", configName = "AutoTotem", description = "Checks for inhuman totem re-equip speed", decay = 0.025)
-public class AutoTotemA extends Check implements PacketCheck {
+public class AutoTotemA extends Check implements PacketReceiveListener, PacketSendListener {
 
     private long totemPopTime = 0;
     private int totemPopTransaction = -1;

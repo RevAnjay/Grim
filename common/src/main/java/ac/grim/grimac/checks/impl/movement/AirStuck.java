@@ -4,7 +4,7 @@ import ac.grim.grimac.GrimAPI;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PacketCheck;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.LogUtil;
 import ac.grim.grimac.utils.math.Vector3dm;
@@ -15,7 +15,7 @@ import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying;
 
 @CheckData(name = "AirStuck", description = "Checks for players freezing in air without position packets", experimental = true)
-public class AirStuck extends Check implements PacketCheck {
+public class AirStuck extends Check implements PacketReceiveListener {
 
     private static final double MIN_REAL_DISTANCE_SQ = 0.01 * 0.01;
 

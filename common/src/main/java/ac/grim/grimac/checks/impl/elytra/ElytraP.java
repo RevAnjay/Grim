@@ -2,14 +2,14 @@ package ac.grim.grimac.checks.impl.elytra;
 
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PostPredictionCheck;
+import ac.grim.grimac.checks.type.PostPredictionListener;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.update.PredictionComplete;
 import com.github.retrooper.packetevents.protocol.item.type.ItemTypes;
 import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
 
 @CheckData(name = "ElytraP", description = "Sustained gliding-style velocity without a glider equipped", experimental = true, decay = 0.05, setback = 3)
-public class ElytraP extends Check implements PostPredictionCheck {
+public class ElytraP extends Check implements PostPredictionListener {
 
     // Wait long enough that elytra-flight residual inertia (drag 0.99) has decayed under vanilla
     // drag (0.91) — at 8 ticks initial 1.5 m/tick is below 0.7 already.

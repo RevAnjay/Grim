@@ -2,13 +2,14 @@ package ac.grim.grimac.checks.impl.inventory;
 
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.InventoryCheck;
+import ac.grim.grimac.checks.type.PacketSendListener;
 import ac.grim.grimac.player.GrimPlayer;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 
 @CheckData(name = "InventoryE", setback = 3, description = "Sent a held item change packet while inventory is open")
-public class InventoryE extends InventoryCheck {
+public class InventoryE extends InventoryCheck implements PacketSendListener {
     private long lastTransaction = Long.MAX_VALUE; // Impossible transaction ID
 
     public InventoryE(GrimPlayer player) {

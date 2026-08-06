@@ -535,7 +535,8 @@ public class GrimPlayer implements GrimUser {
     }
 
     public double getEyeHeight() {
-        return getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9) ? pose.eyeHeight
+        return getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9) ?
+                compensatedEntities.self.getAttributeValue(Attributes.SCALE) * pose.eyeHeight
                 : isSneaking ? 1.54f : 1.62f;
     }
 
@@ -937,7 +938,7 @@ public class GrimPlayer implements GrimUser {
 
     @Override
     public String getBrand() {
-        return checkManager.getPacketCheck(ClientBrand.class).getBrand();
+        return checkManager.getCheck(ClientBrand.class).getBrand();
     }
 
     @Override
@@ -957,12 +958,12 @@ public class GrimPlayer implements GrimUser {
 
     @Override
     public double getHorizontalSensitivity() {
-        return checkManager.getRotationCheck(AimProcessor.class).sensitivityX;
+        return checkManager.getCheck(AimProcessor.class).sensitivityX;
     }
 
     @Override
     public double getVerticalSensitivity() {
-        return checkManager.getRotationCheck(AimProcessor.class).sensitivityY;
+        return checkManager.getCheck(AimProcessor.class).sensitivityY;
     }
 
     @Override

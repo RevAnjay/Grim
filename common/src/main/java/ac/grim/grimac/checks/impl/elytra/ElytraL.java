@@ -2,7 +2,7 @@ package ac.grim.grimac.checks.impl.elytra;
 
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
-import ac.grim.grimac.checks.type.PostPredictionCheck;
+import ac.grim.grimac.checks.type.PostPredictionListener;
 import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.update.PredictionComplete;
 import ac.grim.grimac.utils.nmsutil.BlockUtil;
@@ -10,7 +10,7 @@ import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
 import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes;
 
 @CheckData(name = "ElytraL", description = "Checks for impossible elytra hovering", experimental = true, decay = 0.05, setback = 3)
-public class ElytraL extends Check implements PostPredictionCheck {
+public class ElytraL extends Check implements PostPredictionListener {
 
     private int hoverTicks = 0;
 
