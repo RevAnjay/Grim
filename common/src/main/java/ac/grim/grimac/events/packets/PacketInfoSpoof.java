@@ -33,6 +33,7 @@ import com.github.retrooper.packetevents.protocol.particle.data.ParticleColorDat
 import com.github.retrooper.packetevents.protocol.particle.type.ParticleTypes;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.Equipment;
+import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDestroyEntities;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityEquipment;
@@ -170,7 +171,9 @@ public class PacketInfoSpoof extends PacketListenerAbstract {
         healthValue = (float) Math.max(1.0, Math.min(1024.0, config.getDoubleElse("spoof.health-value", 20.0)));
         healthSpread = (float) Math.max(0.0, Math.min(healthValue - 1.0, config.getDoubleElse("spoof.health-spread", 6.0)));
         fakeDamage = config.getBooleanElse("spoof.health-fake-damage", false);
-        if (!fakeDamage) walks.clear();
+        // Unconditional: health-value or max-health may have moved, and a walk keeps the old ceiling.
+        walks.clear();
+        visibleMax.clear();
     }
 
 
@@ -182,8 +185,15 @@ public class PacketInfoSpoof extends PacketListenerAbstract {
         return 6;
     }
 
+    // A viewer who is not being lied to sees the real world, including in their own command completion.
+    public static boolean spoofExempt(User user) {
+        GrimPlayer receiver = GrimAPI.INSTANCE.getPlayerDataManager().getPlayer(user);
+        return receiver != null && receiver.noSpoofPermission;
+    }
+
     @Override
     public void onPacketSend(PacketSendEvent event) {
+        if (spoofExempt(event.getUser())) return;
         if (event.getPacketType() == PacketType.Play.Server.ENTITY_METADATA) {
             if (!spoofHealth && !spoofAbsorption && !spoofEffects && !itemStrippingOn()
                     && !spoofMobNames && !spoofMobHealth) return;
@@ -543,17 +553,25 @@ public class PacketInfoSpoof extends PacketListenerAbstract {
     private static final class Walk {
         float shown;
         float real;
+        float ceiling;
 
-        Walk(float shown, float real) {
+        Walk(float shown, float real, float ceiling) {
             this.shown = shown;
             this.real = real;
+            this.ceiling = ceiling;
         }
     }
 
     // Keyed by target: the real value is the same in every copy, so the step is taken once.
     private static float walked(UUID target, float real, float ceiling) {
-        Walk walk = walks.computeIfAbsent(target, k -> new Walk(ceiling, real));
+        Walk walk = walks.computeIfAbsent(target, k -> new Walk(ceiling, real, ceiling));
         synchronized (walk) {
+            if (walk.ceiling != ceiling) {
+                // A walk anchored to an older max would sit at a fraction of the new one forever. Carry the
+                // fraction across instead of jumping or re-rolling.
+                walk.shown = Math.max(1f, Math.min(ceiling, walk.shown / walk.ceiling * ceiling));
+                walk.ceiling = ceiling;
+            }
             if (real != walk.real) {
                 if (real < walk.real) {
                     // Independent of the real hit, or the amount taken off leaks the damage it stands for.
@@ -600,6 +618,9 @@ public class PacketInfoSpoof extends PacketListenerAbstract {
     }
 
     private static float visibleMaxFor(GrimPlayer receiver, int entityId) {
+        // sendPairingData sends the metadata before the attributes, so waiting to be told the max is always
+        // one packet too late. When we rewrite every max_health property ourselves, that value is the answer.
+        if (spoofMaxHealth) return healthValue;
         Map<Integer, Float> known = visibleMax.get(receiver.uuid);
         Float max = known == null ? null : known.get(entityId);
         return max == null ? 20f : max;

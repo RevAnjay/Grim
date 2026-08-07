@@ -160,6 +160,8 @@ public class PacketStaffListSpoof extends PacketListenerAbstract {
 
         for (User user : PacketEvents.getAPI().getProtocolManager().getUsers()) {
             if (user.getConnectionState() != ConnectionState.PLAY) continue;
+            // The rotation pushes directly, so it needs the same exemption the send listener applies
+            if (PacketInfoSpoof.spoofExempt(user)) continue;
             forget(user, goneTeams, goneIds);
             announce(user, batches, entries);
         }
@@ -333,6 +335,7 @@ public class PacketStaffListSpoof extends PacketListenerAbstract {
     @Override
     public void onPacketSend(PacketSendEvent event) {
         if (!spoofSpectators && !spoofGameMode && !hideVanishedTeams && !fakeStaff && !pingSpoofingOn()) return;
+        if (PacketInfoSpoof.spoofExempt(event.getUser())) return;
 
         User user = event.getUser();
         UUID self = user.getUUID();

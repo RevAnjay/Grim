@@ -146,6 +146,11 @@ bukkit {
             default = Permission.Default.FALSE
         }
 
+        register("grim.nospoof") {
+            description = "See the real tab list, health and item data instead of the spoofed ones"
+            default = Permission.Default.FALSE
+        }
+
         register("grim.disabled") {
             description = "Disable Grim checks while keeping player state tracked"
             default = Permission.Default.FALSE

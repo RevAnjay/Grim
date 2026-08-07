@@ -254,6 +254,8 @@ public class GrimPlayer implements GrimUser {
     public ac.grim.grimac.utils.inventory.InventoryDesyncStatus inventoryDesyncStatus = ac.grim.grimac.utils.inventory.InventoryDesyncStatus.NOT_DESYNCED;
     public final @NotNull AtomicInteger cancelledPackets = new AtomicInteger(0);
     public @NotNull MainSupportingBlockData mainSupportingBlockData = MainSupportingBlockData.AIR_OFF_GROUND;
+    // The only thing holding the player up is a placement the server has not confirmed, over what was air
+    public boolean onlySupportedByUnconfirmedPlacement;
     public final @NotNull Object2DoubleMap<FluidTag> fluidHeight = new Object2DoubleArrayMap<>(2);
     // possibleEyeHeights[0] = Standing eye heights, [1] = Sneaking. [2] = Elytra, Swimming, and Riptide Trident which only exists in 1.9+
     public final double[][] possibleEyeHeights = new double[3][];
@@ -283,6 +285,8 @@ public class GrimPlayer implements GrimUser {
     @Getter private boolean resetItemUsageOnItemUse;
     // end config
     public boolean noModifyPacketPermission;
+    // Staff have no reason to be lied to, and a fake name in their own tab completion is pure noise
+    public boolean noSpoofPermission;
     public boolean noSetbackPermission;
     // This variable is for support with test servers that want to be able to disable grim
     // Grim disabler 2022 still working!
@@ -641,6 +645,7 @@ public class GrimPlayer implements GrimUser {
                 boolean noSetbackPermission = hasPermission("grim.nosetback");
                 boolean disabledPermission = hasPermission("grim.disabled");
                 boolean exemptPermission = hasPermission("grim.exempt");
+                boolean noSpoofPermission = hasPermission("grim.nospoof");
                 for (AbstractCheck check : checkManager.allChecks.values()) {
                     if (check instanceof Check c) {
                         c.updatePermissions();
@@ -648,6 +653,7 @@ public class GrimPlayer implements GrimUser {
                 }
 
                 this.noModifyPacketPermission = noModifyPacketPermission;
+                this.noSpoofPermission = noSpoofPermission;
                 this.noSetbackPermission = noSetbackPermission;
                 this.disableGrim = disabledPermission;
                 if (exemptPermission) {
