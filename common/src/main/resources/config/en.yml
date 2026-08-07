@@ -64,6 +64,9 @@ cancel-duplicate-packet: true
 ignore-duplicate-packet-rotation: true
 
 Simulation:
+    # Predict a glider that stopped sending positions. Without it the check only runs on the client's
+    # 20-tick position reminder, which is a second of free hovering.
+    predict-withheld-glide: true
     # How much should we multiply total advantage by when the player is legit
     # This is what the default config looks like (x axis = seconds, y axis = 1/1000 block): https://www.desmos.com/calculator/d4ufgxrxer
     setback-decay-multiplier: 0.999
@@ -463,4 +466,4 @@ update-permission-ticks: -1
 #   config-version: bumped on every breaking shape change. Old configs
 #                   auto-migrate up via the bundled updater on next start.
 config-flavor: V2
-config-version: 11
+config-version: 12

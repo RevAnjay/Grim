@@ -64,6 +64,9 @@ cancel-duplicate-packet: true
 ignore-duplicate-packet-rotation: true
 
 Simulation:
+    # Predict a glider that stopped sending positions. Without it the check only runs on the client's
+    # 20-tick position reminder, which is a second of free hovering.
+    predict-withheld-glide: true
     # Riduce gradualmente l'avanzamento totale del giocatore quando è legittimo
     setback-decay-multiplier: 0.999
     # Limite per creare una violazione rispetto al movimento del giocatore
@@ -411,4 +414,4 @@ max-ping-firework-boost: 1000
 update-permission-ticks: -1
 
 config-flavor: V2
-config-version: 11
+config-version: 12

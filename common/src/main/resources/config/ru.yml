@@ -64,6 +64,9 @@ cancel-duplicate-packet: true
 ignore-duplicate-packet-rotation: true
 
 Simulation:
+    # Predict a glider that stopped sending positions. Without it the check only runs on the client's
+    # 20-tick position reminder, which is a second of free hovering.
+    predict-withheld-glide: true
     # На сколько мы должны умножить общее преимущество, когда игрок легален.
     # Вот как выглядит конфигурация по умолчанию (ось x = секунды, ось y = 1/1000 блока): https://www.desmos.com/calculator/d4ufgxrxer
     setback-decay-multiplier: 0.999
@@ -422,4 +425,4 @@ max-ping-firework-boost: 1000
 update-permission-ticks: -1
 
 config-flavor: V2
-config-version: 11
+config-version: 12

@@ -598,6 +598,12 @@ public class CheckManagerListener extends PacketListenerAbstract {
         player.checkManager.onPacketSend(event);
     }
 
+    private static volatile boolean predictWithheldGlide = true;
+
+    public static void reload(ac.grim.grimac.api.config.ConfigManager config) {
+        predictWithheldGlide = config.getBooleanElse("Simulation.predict-withheld-glide", true);
+    }
+
     private static boolean isDuplicatePacket(@NotNull GrimPlayer player, @NotNull WrapperPlayClientPlayerFlying flying) {
         // teleports are not duplicate packets
         if (player.packetStateData.lastPacketWasTeleport) return false;
@@ -755,6 +761,29 @@ public class CheckManagerListener extends PacketListenerAbstract {
             } else if (update.isTeleport()) { // Mojang doesn't use their own exit vehicle field to leave vehicles, manually call the setback handler
                 player.getSetbackTeleportUtil().onPredictionComplete(new PredictionComplete(0, update, true));
             }
+        } else if (predictWithheldGlide && player.isGliding && player.wasGliding && !player.inVehicle()
+                && !player.isExemptElytra() && !player.packetStateData.lastPacketWasTeleport
+                // lastPacketWasTeleport is only decided for pos+look packets (:411), so it stays false on a
+                // rotation-only packet while a teleport is still unconfirmed. clientVelocity there is the
+                // pre-teleport glide speed, and asserting a standstill against it sets the player back to
+                // wherever an ender pearl just took them from.
+                && player.getSetbackTeleportUtil().pendingTeleports.isEmpty()
+                && player.clientVelocity.length() >= player.getMovementThreshold()) {
+            // Same three terms the engine uses to refuse a zero vector to a glider, so a silence it would
+            // not have excused as 0.03 is read as the standstill the player is claiming.
+            // Without this the prediction only runs on the client's 20-tick position reminder.
+            final Vector3d standstill = new Vector3d(player.x, player.y, player.z);
+            player.lastX = player.x;
+            player.lastY = player.y;
+            player.lastZ = player.z;
+            // Silence only pins the player to within one threshold of where they were last heard, so the
+            // box has to carry that. Cleared by hand because the offset check returns before it does.
+            player.uncertaintyHandler.lastHorizontalOffset = player.getMovementThreshold();
+            player.uncertaintyHandler.lastVerticalOffset = player.getMovementThreshold();
+            player.checkManager.onPositionUpdate(
+                    new PositionUpdate(standstill, standstill, onGround, null, null, false));
+            player.uncertaintyHandler.lastHorizontalOffset = 0;
+            player.uncertaintyHandler.lastVerticalOffset = 0;
         }
 
         player.packetStateData.didLastLastMovementIncludePosition = player.packetStateData.didLastMovementIncludePosition;
