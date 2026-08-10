@@ -161,9 +161,13 @@ public class AirStuck extends Check implements PacketReceiveListener {
         // Sim couldn't move player down = already on real ground, no flag
         if (!canTeleport || player.platformPlayer == null) return;
 
-        flagAndAlert("ms=" + elapsed + " y=" + String.format("%.1f", simY));
+        boolean flagged = flagAndAlert("ms=" + elapsed + " y=" + String.format("%.1f", simY));
         lastFlagTime = now;
         lastPositionTime = now;
+
+        // flag() is what knows about the experimental gate, disableGrim and the exempt permission. Teleporting
+        // on a flag that never fired means a check nobody switched on still moves players around.
+        if (!flagged || !shouldModifyPackets()) return;
 
         var world = player.platformPlayer.getWorld();
         float yaw = player.yaw;
