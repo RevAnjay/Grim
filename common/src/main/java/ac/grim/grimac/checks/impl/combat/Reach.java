@@ -472,7 +472,7 @@ public class Reach extends Check implements PacketReceiveListener {
     @Override
     public void onReload(@NotNull ConfigManager config) {
         this.cancelImpossibleHits = config.getBooleanElse("Reach.block-impossible-hits", true);
-        this.cancelObstructedHits = config.getBooleanElse("WallHit.cancel-hits", false);
+        this.cancelObstructedHits = config.getBooleanElse("WallHit.cancel-hits", true);
         this.cancelBufferDecay = Math.max(0.01, config.getDoubleElse("Reach.cancel-buffer-decay", 0.25));
         this.enableWallHit = config.getBooleanElse("WallHit.enabled", true);
         this.enableEntityPierce = config.getBooleanElse("EntityPierce.enabled", true);

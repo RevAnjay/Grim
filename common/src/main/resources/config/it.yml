@@ -192,8 +192,9 @@ Trigger:
 WallHit:
     # Enable detection of hitting through blocks (doors, trapdoors, etc.)
     enabled: true
-    # Cancel the hit outright instead of only flagging it. Off: the aim used for the hit has not arrived yet.
-    cancel-hits: false
+    # Cancel the hit outright instead of only flagging it. Off: obstructed hits are only flagged, and
+    # the buffered path still cancels them from the second hit on the same target.
+    cancel-hits: true
     # Only check hits against players
     only-players: false
     # Setback VL for hitting through blocks
@@ -414,4 +415,4 @@ max-ping-firework-boost: 1000
 update-permission-ticks: -1
 
 config-flavor: V2
-config-version: 12
+config-version: 13

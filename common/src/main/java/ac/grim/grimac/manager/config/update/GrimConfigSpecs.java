@@ -56,9 +56,12 @@ public final class GrimConfigSpecs {
      * <p>v11 → v12: adds {@code Simulation.predict-withheld-glide}. No explicit
      * migration is needed; the updater's default rewrite adds the key, and
      * auto-lift preserves an existing user value if present.
+     *
+     * <p>v12 → v13: turns {@code WallHit.cancel-hits} on. Auto-lift would carry an
+     * existing value forward, so this migration writes the new default explicitly.
      */
     public static @NotNull ConfigUpdater.Spec mainConfig() {
-        return ConfigUpdater.Spec.builder("/config/", 12, ConfigUpdater.ConfigFlavor.V2)
+        return ConfigUpdater.Spec.builder("/config/", 13, ConfigUpdater.ConfigFlavor.V2)
                 .migration(10, ctx -> {
                     String typeRaw = ctx.input().getString("history.database.type");
                     String type = typeRaw == null ? null : typeRaw.trim().toUpperCase(Locale.ROOT);
@@ -100,6 +103,7 @@ public final class GrimConfigSpecs {
                         if (pass != null) ctx.otherFile(target).put(backendId + ".password", pass);
                     }
                 })
+                .migration(12, ctx -> ctx.output().put("WallHit.cancel-hits", true))
                 .build();
     }
 
