@@ -30,7 +30,6 @@ public class CrashA extends Check implements PrePredictionPacketReceiveListener 
     @Override
     public void onPrePredictionPacketReceive(PacketReceiveEvent event) {
         if (player.disableGrim) return;
-        if (player.packetStateData.lastPacketWasTeleport) return;
 
         final PacketTypeCommon type = event.getPacketType();
         final boolean flying = WrapperPlayClientPlayerFlying.isFlying(type);
@@ -57,6 +56,12 @@ public class CrashA extends Check implements PrePredictionPacketReceiveListener 
 
         final Vector3d clamped = VectorUtils.clampVector(new Vector3d(rawX, rawY, rawZ));
 
+        // Before both gates: otherwise lastWire stays pre-teleport and the next packet reads as a jump.
+        if (player.packetStateData.lastPacketWasTeleport) {
+            lastWire = clamped;
+            return;
+        }
+
         // Absolute crash domain (flying only): a raw coord beyond the world border is impossible (the
         // client pins X/Z to +-2.9999999E7). Strict '>' keeps a player standing on the hard clamp valid.
         if (flying && (Math.abs(rawX) > HARD_CODED_BORDER || Math.abs(rawZ) > HARD_CODED_BORDER || Math.abs(rawY) > Integer.MAX_VALUE)) {
@@ -68,16 +73,7 @@ public class CrashA extends Check implements PrePredictionPacketReceiveListener 
             return;
         }
 
-        // A recognised server teleport (/tp, pearl, respawn, portal, setback-accept) re-seeds the wire
-        // reference; lastPacketWasTeleport is populated only by the server teleport queues, never forgeable.
-        if (player.packetStateData.lastPacketWasTeleport) {
-            lastWire = clamped;
-            return;
-        }
-
-        // The queue is only walked on pos+look packets, so a teleport can still be pending when the client
-        // reports the destination. Trust the destination itself rather than the pending flag: the server
-        // picked that coordinate, so landing on it tells us nothing a legitimate teleport wouldn't.
+        // The queue is only walked on pos+look packets, so the destination can arrive while still pending.
         if (player.getSetbackTeleportUtil().matchesPendingTeleport(clamped.getX(), clamped.getY(), clamped.getZ())) {
             lastWire = clamped;
             return;

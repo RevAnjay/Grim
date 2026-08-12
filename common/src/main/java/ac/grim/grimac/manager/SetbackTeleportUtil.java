@@ -357,12 +357,7 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
         }
     }
 
-    /**
-     * Whether a position on the wire lands on a queued teleport's destination. Peek-only, safe to call
-     * from the netty thread: {@link #checkTeleportQueue} accepts teleports only on pos+look packets, so
-     * a client that withholds rotation can sit on the destination for arbitrarily many position-only
-     * packets before the queue is ever walked.
-     */
+    /** Whether a position lands on a queued teleport's destination. Peek-only, safe from the netty thread. */
     public boolean matchesPendingTeleport(double x, double y, double z) {
         for (TeleportData teleport : pendingTeleports) {
             double trueX = (teleport.isRelativeX() ? player.x : 0) + teleport.getLocation().getX();
