@@ -75,6 +75,14 @@ public class CrashA extends Check implements PrePredictionPacketReceiveListener 
             return;
         }
 
+        // The queue is only walked on pos+look packets, so a teleport can still be pending when the client
+        // reports the destination. Trust the destination itself rather than the pending flag: the server
+        // picked that coordinate, so landing on it tells us nothing a legitimate teleport wouldn't.
+        if (player.getSetbackTeleportUtil().matchesPendingTeleport(clamped.getX(), clamped.getY(), clamped.getZ())) {
+            lastWire = clamped;
+            return;
+        }
+
         if (lastWire == null) lastWire = new Vector3d(player.x, player.y, player.z);
 
         final double dx = clamped.getX() - lastWire.getX();

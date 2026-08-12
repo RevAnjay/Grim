@@ -358,6 +358,28 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
     }
 
     /**
+     * Whether a position on the wire lands on a queued teleport's destination. Peek-only, safe to call
+     * from the netty thread: {@link #checkTeleportQueue} accepts teleports only on pos+look packets, so
+     * a client that withholds rotation can sit on the destination for arbitrarily many position-only
+     * packets before the queue is ever walked.
+     */
+    public boolean matchesPendingTeleport(double x, double y, double z) {
+        for (TeleportData teleport : pendingTeleports) {
+            double trueX = (teleport.isRelativeX() ? player.x : 0) + teleport.getLocation().getX();
+            double trueY = (teleport.isRelativeY() ? player.y : 0) + teleport.getLocation().getY();
+            double trueZ = (teleport.isRelativeZ() ? player.z : 0) + teleport.getLocation().getZ();
+            Vector3d clamped = VectorUtils.clampVector(new Vector3d(trueX, trueY, trueZ));
+            double threshold = teleport.isRelativePos() ? player.getMovementThreshold() : 0;
+            if (Math.abs(clamped.getX() - x) <= threshold
+                    && Math.abs(clamped.getY() - y) <= 1e-7 + threshold
+                    && Math.abs(clamped.getZ() - z) <= threshold) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @param x - Player X position
      * @param y - Player Y position
      * @param z - Player Z position
