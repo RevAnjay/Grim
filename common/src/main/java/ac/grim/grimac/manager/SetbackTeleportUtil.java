@@ -538,6 +538,28 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
         requiredSetBack = new SetBackData(data, player.yaw, player.pitch, null, false, plugin);
 
         this.lastKnownGoodPosition = new SetbackPosWithVector(safePosition, new Vector3dm());
+
+        // Kept even after the pending queue polls the teleport. A transaction desync can lose the formal
+        // accept (checkTeleportQueue's exact-transaction match), leaving lastPacketWasTeleport false, but a
+        // player landing on a destination the server itself chose is not crashing - checks read this to tell.
+        recentTeleports.addLast(new double[]{safePosition.getX(), safePosition.getY(), safePosition.getZ(), System.currentTimeMillis()});
+        while (recentTeleports.size() > 12) recentTeleports.pollFirst();
+    }
+
+    private final java.util.concurrent.ConcurrentLinkedDeque<double[]> recentTeleports = new java.util.concurrent.ConcurrentLinkedDeque<>();
+
+    /** Whether a position lands on a server teleport destination sent within the last few seconds. Netty-safe. */
+    public boolean wasRecentTeleportDestination(double x, double y, double z) {
+        final long now = System.currentTimeMillis();
+        final double threshold = player.getMovementThreshold();
+        for (double[] t : recentTeleports) {
+            // Wide enough to cover a world-change warp whose confirm is delayed by slow chunk loading.
+            if (now - (long) t[3] > 5000L) continue;
+            if (Math.abs(t[0] - x) <= threshold && Math.abs(t[1] - y) <= 1e-7 + threshold && Math.abs(t[2] - z) <= threshold) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @AllArgsConstructor
