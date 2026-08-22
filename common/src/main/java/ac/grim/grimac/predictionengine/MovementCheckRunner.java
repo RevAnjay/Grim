@@ -245,8 +245,14 @@ public class MovementCheckRunner extends Check {
             } else {
                 // Server always teleports the player when they eject anyways,
                 // so just let the player control where they eject within reason, they get set back anyways
-                if (new Vector3dm(player.lastX, player.lastY, player.lastZ).distance(new Vector3dm(player.x, player.y, player.z)) > 3) {
+                double dismountDistance = new Vector3dm(player.lastX, player.lastY, player.lastZ)
+                        .distance(new Vector3dm(player.x, player.y, player.z));
+                if (dismountDistance > 3) {
                     player.getSetbackTeleportUtil().executeForceResync(); // Too far! (I think this value is sane)
+                } else {
+                    // The server accepted this vehicle exit. Seed the setback target before the normal
+                    // post-prediction checks resume, rather than retaining a stale pre-mount position.
+                    player.getSetbackTeleportUtil().acceptDismountPosition();
                 }
 
                 handleTeleport(update);

@@ -119,6 +119,15 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
                 new Vector3d(player.x, player.y, player.z), velocity);
     }
 
+    /**
+     * Accepts the server-authorized vehicle exit position as a future setback target.
+     * MovementCheckRunner calls this only after bounding the client-controlled dismount
+     * displacement, so the old pre-mount target cannot strand the player below the boat.
+     */
+    public void acceptDismountPosition() {
+        updateLastKnownGoodPositionIfSafe(new Vector3dm());
+    }
+
     @Override
     public void onReload(ac.grim.grimac.api.config.ConfigManager config) {
         safePositionThreshold = config.getDoubleElse("Simulation.threshold", 0.001);
@@ -187,6 +196,10 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
                 || player.uncertaintyHandler.lastVehicleSwitch.hasOccurredSince(10);
     }
 
+    private boolean isServerMounted() {
+        return player.compensatedEntities.serverPlayerVehicle != null || player.inVehicle();
+    }
+
     private void simulateFriction(Vector3dm vector) {
         // We must always do this before simulating positions, as this is the last actual (safe) movement
         // We must not do this for knockback or explosions, as they are at the start of the tick
@@ -213,7 +226,7 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
 
     private void blockMovementsUntilResync(boolean simulateNextTickPosition, boolean isResync) {
         if (requiredSetBack == null) return; // Hasn't spawned
-        if (isServerMountedOrSwitching()) return; // Setbacks dismount vanilla vehicles and virtual seats
+        if (isServerMounted()) return; // Setbacks dismount vanilla vehicles and virtual seats
         if (player.platformPlayer != null && player.noSetbackPermission)
             return; // The player has permission to cheat
         requiredSetBack.setPlugin(false); // The player has illegal movement, block from vanilla ac override
@@ -291,7 +304,7 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
 
     private void sendSetback(SetBackData data) {
         // Defensive race guard: the player may mount after the caller prepared this setback.
-        if (isServerMountedOrSwitching()) {
+        if (isServerMounted()) {
             data.setComplete(true);
             if (requiredSetBack == data) blockOffsets = false;
             return;
