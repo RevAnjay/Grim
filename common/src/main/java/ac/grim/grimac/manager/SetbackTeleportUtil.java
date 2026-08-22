@@ -67,6 +67,7 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
     @Getter
     private SetBackData requiredSetBack = null;
     private long lastWorldResync = 0;
+    private boolean wasServerMounted = false;
 
     public SetbackTeleportUtil(GrimPlayer player) {
         super(player);
@@ -82,48 +83,40 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
             afterTickFriction.multiply(scale);
         }
 
-        // We must first check if the player has accepted their setback
-        // If the setback isn't complete, then this position is illegitimate
-        if (predictionComplete.getData().getSetback() != null) {
-            // The player needs to now wait for their vehicle to go into the right place before getting back in
-            if (cheatVehicleInterpolationDelay > 0) cheatVehicleInterpolationDelay = 10;
-            // Teleport, let velocity be reset
-            lastKnownGoodPosition = new SetbackPosWithVector(new Vector3d(player.x, player.y, player.z), afterTickFriction);
-        } else if (requiredSetBack == null || requiredSetBack.isComplete()) {
-            cheatVehicleInterpolationDelay--;
+        boolean serverMounted = isServerMountedOrSwitching();
+        boolean justDismounted = wasServerMounted && !serverMounted;
+        wasServerMounted = serverMounted;
 
-            if (!blockOffsets) {
-                double offset = predictionComplete.getOffset();
+        // Vehicle and seat plugins intentionally place the player at entity-relative coordinates.
+        // Never record those coordinates as a standalone setback target. On dismount, only accept
+        // the current position when the player's complete bounding box is outside solid blocks.
+        if (!serverMounted) {
+            // We must first check if the player has accepted their setback
+            // If the setback isn't complete, then this position is illegitimate
+            if (predictionComplete.getData().getSetback() != null) {
+                // The player needs to now wait for their vehicle to go into the right place before getting back in
+                if (cheatVehicleInterpolationDelay > 0) cheatVehicleInterpolationDelay = 10;
+                // Teleport, let velocity be reset
+                updateLastKnownGoodPositionIfSafe(afterTickFriction);
+            } else if (requiredSetBack == null || requiredSetBack.isComplete()) {
+                cheatVehicleInterpolationDelay--;
 
-                if (offset < safePositionThreshold) {
-                    lastKnownGoodPosition = new SetbackPosWithVector(
-                        new Vector3d(player.x, player.y, player.z), afterTickFriction);
-                } else if (lastKnownGoodPosition != null && !player.isFlying) {
-                    Vector3d oldPos = lastKnownGoodPosition.pos;
-                    Vector3dm oldVel = lastKnownGoodPosition.vector;
-
-                    double gravity = player.compensatedEntities.self.getAttributeValue(
-                        com.github.retrooper.packetevents.protocol.attribute.Attributes.GRAVITY);
-                    double newVelY = (oldVel.getY() - gravity) * 0.98;
-
-                    // Collision-aware Y step so we don't sink through the floor while the player keeps flagging
-                    SimpleCollisionBox savedBB = player.boundingBox;
-                    player.boundingBox = GetBoundingBox.getPlayerBoundingBox(
-                        player, oldPos.getX(), oldPos.getY(), oldPos.getZ());
-                    Vector3dm collided = Collisions.collide(player, 0, newVelY, 0);
-                    player.boundingBox = savedBB;
-
-                    if (collided.getY() != newVelY) newVelY = 0;
-                    double newY = Math.max(oldPos.getY() + collided.getY(), -64);
-
-                    lastKnownGoodPosition = new SetbackPosWithVector(
-                        new Vector3d(oldPos.getX(), newY, oldPos.getZ()),
-                        new Vector3dm(oldVel.getX(), newVelY, oldVel.getZ()));
+                if (!blockOffsets && (justDismounted || predictionComplete.getOffset() < safePositionThreshold)) {
+                    updateLastKnownGoodPositionIfSafe(afterTickFriction);
                 }
             }
         }
 
         if (requiredSetBack != null) requiredSetBack.tick();
+    }
+
+    private void updateLastKnownGoodPositionIfSafe(Vector3dm velocity) {
+        SimpleCollisionBox currentBox = GetBoundingBox.getPlayerBoundingBox(player, player.x, player.y, player.z)
+                .expand(-SimpleCollisionBox.COLLISION_EPSILON);
+        if (!Collisions.isEmpty(player, currentBox)) return;
+
+        lastKnownGoodPosition = new SetbackPosWithVector(
+                new Vector3d(player.x, player.y, player.z), velocity);
     }
 
     @Override
@@ -153,13 +146,13 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
     }
 
     public boolean executeViolationSetback() {
-        if (isExempt()) return false;
+        if (isExempt() || isServerMountedOrSwitching()) return false;
         blockMovementsUntilResync(true, false);
         return true;
     }
 
     public boolean executeSetbackToPosition(Vector3d targetPos) {
-        if (isExempt()) return false;
+        if (isExempt() || isServerMountedOrSwitching()) return false;
         if (requiredSetBack == null) return false;
         if (player.platformPlayer != null && player.noSetbackPermission) return false;
         if (isPendingSetback()) return false;
@@ -183,6 +176,15 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
         if (player.disableGrim) return true;
         // Player has permission to cheat, permission not given to OP by default.
         return player.platformPlayer != null && player.noSetbackPermission;
+    }
+
+    private boolean isServerMountedOrSwitching() {
+        // serverPlayerVehicle is updated as soon as Grim sees the outgoing passenger packet,
+        // while inVehicle() follows transaction-compensated client state. The short transition
+        // window also covers seat/vehicle removal before both views converge after dismounting.
+        return player.compensatedEntities.serverPlayerVehicle != null
+                || player.inVehicle()
+                || player.uncertaintyHandler.lastVehicleSwitch.hasOccurredSince(10);
     }
 
     private void simulateFriction(Vector3dm vector) {
@@ -211,6 +213,7 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
 
     private void blockMovementsUntilResync(boolean simulateNextTickPosition, boolean isResync) {
         if (requiredSetBack == null) return; // Hasn't spawned
+        if (isServerMountedOrSwitching()) return; // Setbacks dismount vanilla vehicles and virtual seats
         if (player.platformPlayer != null && player.noSetbackPermission)
             return; // The player has permission to cheat
         requiredSetBack.setPlugin(false); // The player has illegal movement, block from vanilla ac override
@@ -287,6 +290,13 @@ public class SetbackTeleportUtil extends Check implements PostPredictionListener
     }
 
     private void sendSetback(SetBackData data) {
+        // Defensive race guard: the player may mount after the caller prepared this setback.
+        if (isServerMountedOrSwitching()) {
+            data.setComplete(true);
+            if (requiredSetBack == data) blockOffsets = false;
+            return;
+        }
+
         isSendingSetback = true;
         Vector3d position = data.getTeleportData().getLocation();
 

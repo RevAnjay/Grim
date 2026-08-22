@@ -84,6 +84,8 @@ public class Reach extends Check implements PacketReceiveListener {
     private boolean enableEntityPierce;
     private boolean wallHitOnlyPlayers;
     private boolean entityPierceOnlyPlayers;
+    private int silverfishWallHitFlagInterval;
+    private int silverfishWallHitDetections;
     public double threshold;
     private double hitboxExtraExpansion;
     private double reachExtraExpansion;
@@ -280,6 +282,9 @@ public class Reach extends Check implements PacketReceiveListener {
                     player.checkManager.getCheck(Hitboxes.class).flag(result.verbose() + added);
                 }
                 case WALL_HIT -> {
+                    if (reachEntity.getType() == EntityTypes.SILVERFISH && !shouldFlagSilverfishWallHit()) {
+                        break;
+                    }
                     String added = reachEntity.getType() == EntityTypes.PLAYER ? "" : ", type=" + reachEntity.getType().getName().getKey();
                     player.checkManager.getCheck(WallHit.class).flagAndAlert(result.verbose() + added);
                 }
@@ -349,8 +354,9 @@ public class Reach extends Check implements PacketReceiveListener {
                     checkWallHit ? wallHitIgnoredBlocks : null, checkWallHit ? blocksChangedThisTick : null);
             HitData hitData = hitResult.second();
             // Hit a different entity than the target (EntityPierce)
-            if (checkEntityPierce && hitData instanceof EntityHitData &&
-                    player.compensatedEntities.getPacketEntityID(((EntityHitData) hitData).getEntity()) != player.compensatedEntities.getPacketEntityID(reachEntity)) {
+            if (checkEntityPierce && hitData instanceof EntityHitData entityHitData &&
+                    player.compensatedEntities.getPacketEntityID(entityHitData.getEntity()) != player.compensatedEntities.getPacketEntityID(reachEntity) &&
+                    !isOverlappingSilverfishHit(reachEntity, entityHitData.getEntity())) {
                 minDistance = Double.MIN_VALUE;
                 foundHitData = hitData;
             // Hit a block that wasn't changed this tick (WallHit)
@@ -417,6 +423,25 @@ public class Reach extends Check implements PacketReceiveListener {
         return player.compensatedWorld.isNearHardEntity(path.expand(slack));
     }
 
+    private boolean shouldFlagSilverfishWallHit() {
+        silverfishWallHitDetections++;
+        if (silverfishWallHitDetections < silverfishWallHitFlagInterval) {
+            return false;
+        }
+
+        silverfishWallHitDetections = 0;
+        return true;
+    }
+
+    private boolean isOverlappingSilverfishHit(PacketEntity target, PacketEntity obstruction) {
+        // Dense silverfish farms create many practically coincident hitboxes. The client may
+        // legitimately select a different silverfish than Grim's interpolated ray trace finds
+        // first. Keep every mixed-entity pair protected; only silverfish-through-silverfish is
+        // exempt so the armadillo farm cannot flood players with EntityPierce violations.
+        return target.getType() == EntityTypes.SILVERFISH
+                && obstruction.getType() == EntityTypes.SILVERFISH;
+    }
+
     private SimpleCollisionBox getTargetBox(PacketEntity reachEntity) {
         if (reachEntity.getType() == EntityTypes.END_CRYSTAL) { // Hardcode end crystal box
             return new SimpleCollisionBox(reachEntity.trackedServerPosition.getPos().subtract(1, 0, 1), reachEntity.trackedServerPosition.getPos().add(1, 2, 1));
@@ -478,6 +503,8 @@ public class Reach extends Check implements PacketReceiveListener {
         this.enableEntityPierce = config.getBooleanElse("EntityPierce.enabled", true);
         this.wallHitOnlyPlayers = config.getBooleanElse("WallHit.only-players", false);
         this.entityPierceOnlyPlayers = config.getBooleanElse("EntityPierce.only-players", false);
+        this.silverfishWallHitFlagInterval = Math.max(1, config.getIntElse("WallHit.silverfish-flag-interval", 50));
+        this.silverfishWallHitDetections = 0;
         this.wallHitIgnoredBlocks = new HashSet<>(config.getStringListElse("WallHit.ignored-blocks", new ArrayList<>()));
         this.threshold = config.getDoubleElse("Reach.threshold", 0.0005);
         this.reachExtraExpansion = config.getDoubleElse("Reach.extra-expansion", 0.0);

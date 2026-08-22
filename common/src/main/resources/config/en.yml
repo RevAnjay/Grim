@@ -242,6 +242,10 @@ WallHit:
     cancel-hits: true
     # Only check hits against players
     only-players: false
+    # Dense silverfish farms can produce ambiguous block ray traces.
+    # Only every Nth WallHit detection against a silverfish becomes a violation/alert.
+    # Set to 1 to flag every detection.
+    silverfish-flag-interval: 50
     # Setback VL for hitting through blocks
     setbackvl: 20
     # Blocks to ignore when checking for wall hits
