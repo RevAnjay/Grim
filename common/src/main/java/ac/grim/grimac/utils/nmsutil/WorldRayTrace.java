@@ -160,7 +160,8 @@ public class WorldRayTrace {
     }
 
     @Nullable
-    public static HitData getNearestHitResult(GrimPlayer player, PacketEntity targetEntity, Vector3dm eyePos, Vector3dm lookVec,
+    public static HitData getNearestHitResult(GrimPlayer player, PacketEntity targetEntity, SimpleCollisionBox acceptedTargetBox,
+                                              Vector3dm eyePos, Vector3dm lookVec,
                                               @Nullable Set<String> ignoredBlocks, @Nullable Set<Vector3i> ignoredPositions) {
 
         double maxAttackDistance = player.compensatedEntities.self.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE);
@@ -177,33 +178,54 @@ public class WorldRayTrace {
         PacketEntity closestEntity = null;
         double closestDistanceSquared = blockHitData != null ? blockHitData.getBlockHitLocation().distanceSquared(startingVec) : maxAttackDistance * maxAttackDistance;
 
+        // Resolve the packet target first. Vanilla keeps the first entity returned by the client world's
+        // entity iteration when two hitboxes have the same intersection distance. We cannot reproduce that
+        // ordering from the compensated entity map, but the attack packet tells us which tied entity won.
+        // Giving that entity first refusal preserves strict nearest-hit behavior while making exact overlaps
+        // deterministic instead of dependent on Int2ObjectOpenHashMap iteration order.
+        if (targetEntity.canHit()) {
+            SimpleCollisionBox targetBox = acceptedTargetBox.copy();
+            targetBox.expand(player.checkManager.getCheck(Reach.class).threshold);
+            // This is better than adding to the reach, as 0.03 can cause a player to miss their target.
+            if (!player.packetStateData.didLastLastMovementIncludePosition || player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9)) {
+                targetBox.expand(player.getMovementThreshold());
+            }
+            if (player.getClientVersion().isOlderThan(ClientVersion.V_1_9)) {
+                targetBox.expand(0.1f);
+            }
+
+            if (ReachUtils.isVecInside(targetBox, startingPos)) {
+                return new EntityHitData(targetEntity, eyePos);
+            }
+
+            Pair<Vector3d, BlockFace> targetIntercept = ReachUtils.calculateIntercept(
+                    targetBox, trace.origin(), trace.getPointAtDistance(Math.sqrt(closestDistanceSquared)));
+            if (targetIntercept.first() != null) {
+                Vector3dm hitVec = Vector3dm.from(targetIntercept.first());
+                double distSquared = hitVec.distanceSquared(startingVec);
+                // Vanilla requires an entity hit to be strictly closer than a block hit.
+                if (distSquared < closestDistanceSquared) {
+                    closestDistanceSquared = distSquared;
+                    closestHitVec = hitVec;
+                    closestEntity = targetEntity;
+                }
+            }
+        }
+
         for (PacketEntity entity : player.compensatedEntities.entityMap.values().stream().filter(PacketEntity::canHit).toList()) {
-            SimpleCollisionBox box = null;
+            if (entity.equals(targetEntity)) continue;
+
             // 1.7 and 1.8 players get a bit of extra hitbox (this is why you should use 1.8 on cross version servers)
             // Yes, this is vanilla and not uncertainty.  All reach checks have this or they are wrong.
 
-            if (entity.equals(targetEntity)) {
-                box = entity.getPossibleCollisionBoxes();
-                box.expand(player.checkManager.getCheck(Reach.class).threshold);
-                // This is better than adding to the reach, as 0.03 can cause a player to miss their target
-                // Adds some more than 0.03 uncertainty in some cases, but a good trade off for simplicity
-                //
-                // Just give the uncertainty on 1.9+ clients as we have no way of knowing whether they had 0.03 movement
-                if (!player.packetStateData.didLastLastMovementIncludePosition || player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9))
-                    box.expand(player.getMovementThreshold());
-                if (ReachUtils.isVecInside(box, startingPos)) {
-                    return new EntityHitData(entity, eyePos);
-                }
-            } else {
-                CollisionBox b = entity.getMinimumPossibleCollisionBoxes();
-                if (b instanceof NoCollisionBox) {
-                    continue;
-                }
-                box = (SimpleCollisionBox) b;
-                box.expand(-player.checkManager.getCheck(Reach.class).threshold);
-                // todo, shrink by reachThreshold as well for non-target entities?
-                if (!player.packetStateData.didLastLastMovementIncludePosition || player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9))
-                    box.expand(-player.getMovementThreshold());
+            CollisionBox possibleBox = entity.getMinimumPossibleCollisionBoxes();
+            if (possibleBox instanceof NoCollisionBox) {
+                continue;
+            }
+            SimpleCollisionBox box = (SimpleCollisionBox) possibleBox;
+            box.expand(-player.checkManager.getCheck(Reach.class).threshold);
+            if (!player.packetStateData.didLastLastMovementIncludePosition || player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9)) {
+                box.expand(-player.getMovementThreshold());
             }
             if (player.getClientVersion().isOlderThan(ClientVersion.V_1_9)) {
                 box.expand(0.1f);
@@ -232,6 +254,7 @@ public class WorldRayTrace {
     // because all of the possibleLookVecsAndEyeHeights passed in should be ones that hit the target entity
     // in previous parts of this check when we didn't check for any obstructions like blocks/entities
     public static @NotNull Pair<@NotNull Double, @NotNull HitData> didRayTraceHit(GrimPlayer player, PacketEntity targetEntity,
+                                                                                   SimpleCollisionBox acceptedTargetBox,
                                                                                    List<Pair<Vector3dm, Double>> possibleLookVecsAndEyeHeights,
                                                                                    double x, double y, double z,
                                                                                    @Nullable Set<String> ignoredBlocks,
@@ -246,7 +269,8 @@ public class WorldRayTrace {
 
             Vector3dm eyes = new Vector3dm(x, y + eye, z);
             // this function is completely 0.03 aware
-            final HitData hitResult = WorldRayTrace.getNearestHitResult(player, targetEntity, eyes, lookVec, ignoredBlocks, ignoredPositions);
+            final HitData hitResult = WorldRayTrace.getNearestHitResult(
+                    player, targetEntity, acceptedTargetBox, eyes, lookVec, ignoredBlocks, ignoredPositions);
 
             // If we hit the target entity, it's a valid hit
             if (hitResult instanceof EntityHitData && ((EntityHitData) hitResult).getEntity().equals(targetEntity)) {

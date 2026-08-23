@@ -207,10 +207,6 @@ WallHit:
     cancel-hits: true
     # Only check hits against players
     only-players: false
-    # На плотных фермах чешуйниц трассировка луча через блок бывает неоднозначной.
-    # Только каждое N-е обнаружение WallHit по чешуйнице станет нарушением/предупреждением.
-    # Укажите 1, чтобы учитывать каждое обнаружение.
-    silverfish-flag-interval: 50
     # Setback VL for hitting through blocks
     setbackvl: 20
     # Blocks to ignore when checking for wall hits
