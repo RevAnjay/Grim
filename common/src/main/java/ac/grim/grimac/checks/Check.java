@@ -212,17 +212,9 @@ public class Check extends GrimProcessor implements AbstractCheck {
 
     public final void registerVerboseTemplates(@Nullable VerboseRegistry registry) {
         if (registry == null || stableKey.isEmpty()) return;
-        String pluginVersion = safePluginVersion();
+        String pluginVersion = GrimAPI.INSTANCE.getExternalAPI().getGrimVersion();
         for (Verbose template : Verbose.declaredBy(getClass(), Check.class)) {
             registry.registerTemplate(stableKey, checkName, description, pluginVersion, template);
-        }
-    }
-
-    private static @Nullable String safePluginVersion() {
-        try {
-            return GrimAPI.INSTANCE.getExternalAPI().getGrimVersion();
-        } catch (RuntimeException e) {
-            return null;
         }
     }
 
@@ -377,7 +369,7 @@ public class Check extends GrimProcessor implements AbstractCheck {
                     try {
                         value = supplier.get();
                         if (value == null) value = "";
-                    } catch (Throwable ignored) {
+                    } catch (RuntimeException ignored) {
                         value = "";
                     }
                     computed = true;

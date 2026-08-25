@@ -16,6 +16,7 @@ import com.github.retrooper.packetevents.protocol.player.GameMode;
 import com.github.retrooper.packetevents.protocol.potion.PotionType;
 import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUpdateAttributes;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 
@@ -166,7 +167,8 @@ public class PacketEntitySelf extends PacketEntity {
     }
 
     @Override
-    public void onFirstTransaction(boolean relative, boolean hasPos, double relX, double relY, double relZ, GrimPlayer player) {
+    public void onFirstTransaction(boolean relative, boolean hasPos, double relX, double relY, double relZ,
+                                   @Nullable Float packetXRot, @Nullable Float packetYRot, GrimPlayer player) {
         // Player ignores this
     }
 
