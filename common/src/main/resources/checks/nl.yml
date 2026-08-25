@@ -355,6 +355,25 @@ checks:
     return-tolerance: 3.0
     # Ticks the view must return within to flag.
     return-window: 3
+  AimAcceleration:
+    # Enable detection of sudden rotations beyond human capability
+    enabled: true
+    # Maximum acceleration (degrees per tick squared) before flagging
+    threshold: 900.0
+  AimStaticX:
+    # Enable detection of flat horizontal rotation without vertical adjustment
+    enabled: true
+    # Consecutive ticks without pitch change to trigger detection
+    consecutive-threshold: 20
+    # Minimum accumulated horizontal rotation (degrees) to trigger detection
+    min-horizontal-threshold: 5.0
+  AimStaticY:
+    # Enable detection of flat vertical rotation without horizontal adjustment
+    enabled: true
+    # Consecutive ticks without yaw change to trigger detection
+    consecutive-threshold: 20
+    # Minimum accumulated vertical rotation (degrees) to trigger detection
+    min-vertical-threshold: 5.0
 
   # ======== Chat ========
   ChatA:

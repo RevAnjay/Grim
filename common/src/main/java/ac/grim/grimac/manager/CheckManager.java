@@ -7,6 +7,9 @@ import ac.grim.grimac.checks.debug.HitboxDebugHandler;
 import ac.grim.grimac.checks.impl.aim.AimDuplicateLook;
 import ac.grim.grimac.checks.impl.aim.AimModulo360;
 import ac.grim.grimac.checks.impl.aim.AuraSnapBack;
+import ac.grim.grimac.checks.impl.aim.AimAcceleration;
+import ac.grim.grimac.checks.impl.aim.AimStaticX;
+import ac.grim.grimac.checks.impl.aim.AimStaticY;
 import ac.grim.grimac.checks.impl.aim.processor.AimProcessor;
 import ac.grim.grimac.checks.impl.badpackets.*;
 import ac.grim.grimac.checks.impl.breaking.*;
@@ -179,6 +182,9 @@ public class CheckManager {
                 .put(AimDuplicateLook.class, new AimDuplicateLook(player))
                 .put(BehaviorA.class, new BehaviorA(player))
                 .put(AuraSnapBack.class, new AuraSnapBack(player))
+                .put(AimAcceleration.class, new AimAcceleration(player))
+                .put(AimStaticX.class, new AimStaticX(player))
+                .put(AimStaticY.class, new AimStaticY(player))
                 .put(VehiclePredictionRunner.class, new VehiclePredictionRunner(player))
 
                 .put(NegativeTimer.class, new NegativeTimer(player))
