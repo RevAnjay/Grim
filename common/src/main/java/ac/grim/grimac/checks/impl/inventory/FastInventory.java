@@ -1,6 +1,7 @@
 package ac.grim.grimac.checks.impl.inventory;
 
 import ac.grim.grimac.api.config.ConfigManager;
+import ac.grim.grimac.api.storage.verbose.Verbose;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.InventoryCheck;
 import ac.grim.grimac.player.GrimPlayer;
@@ -13,6 +14,8 @@ import org.jetbrains.annotations.NotNull;
 
 @CheckData(name = "FastInventory", configName = "FastInventory", description = "Detects impossible inventory looting and item transfer speeds", decay = 0.05)
 public class FastInventory extends InventoryCheck {
+
+    private static final Verbose V = Verbose.of("delta={slong}, count={uint}");
 
     private long lastClickTime = 0;
     private int fastClickCount = 0;
@@ -59,7 +62,7 @@ public class FastInventory extends InventoryCheck {
                     fastClickCount++;
                     if (fastClickCount >= 3) {
                         if (++buffer > maxBuffer) {
-                            if (flag(String.format("Fast container click delta=%dms < %dms count=%d", delta, minClickDelayMs, fastClickCount))) {
+                            if (flag(V.write(verbose()).slong(delta).uint(fastClickCount))) {
                                 if (cancel && shouldModifyPackets()) {
                                     event.setCancelled(true);
                                     player.onPacketCancel();
