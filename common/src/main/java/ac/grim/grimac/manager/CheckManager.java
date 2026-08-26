@@ -24,6 +24,8 @@ import ac.grim.grimac.checks.impl.inventory.*;
 import ac.grim.grimac.checks.impl.elytra.*;
 import ac.grim.grimac.checks.impl.exploit.ExploitA;
 import ac.grim.grimac.checks.impl.exploit.ExploitB;
+import ac.grim.grimac.checks.impl.exploit.FastConsume;
+import ac.grim.grimac.checks.impl.exploit.TransactionChoke;
 import ac.grim.grimac.checks.impl.groundspoof.NoFall;
 import ac.grim.grimac.checks.impl.misc.ClientBrand;
 import ac.grim.grimac.checks.impl.misc.GhostBlockMitigation;
@@ -173,6 +175,10 @@ public class CheckManager {
                 .put(ClickStatistics.class, new ClickStatistics(player))
                 .put(CrystalAura.class, new CrystalAura(player))
                 .put(AnchorAura.class, new AnchorAura(player))
+                .put(CombatStrafe.class, new CombatStrafe(player))
+                .put(FastConsume.class, new FastConsume(player))
+                .put(FastInventory.class, new FastInventory(player))
+                .put(TransactionChoke.class, new TransactionChoke(player))
                 .put(AirStuck.class, new AirStuck(player))
                 .put(ElytraN.class, new ElytraN(player))
                 .put(ElytraO.class, new ElytraO(player))

@@ -458,3 +458,24 @@ checks:
     enabled: true
   TransactionOrder:
     enabled: true
+  # ======== New Combat & Exploit Checks ========
+  CombatStrafe:
+    enabled: true
+    buffer: 4.0
+    max-angle-diff: 75.0
+    min-speed: 0.20
+    cancel-hits: true
+  FastConsume:
+    enabled: true
+    buffer: 3.0
+    cancel: true
+  FastInventory:
+    enabled: true
+    buffer: 4.0
+    min-delay-ms: 40
+    cancel: true
+  TransactionChoke:
+    enabled: true
+    buffer: 3.0
+    max-pending: 25
+    cancel-combat: true

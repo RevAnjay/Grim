@@ -421,3 +421,15 @@ Punishments:
       - "1:1 [log]"
       - "10:0 [webhook]"
       - "15:0 kick %player% [GroundedGrim] Unfair combat advantages (%check_name%)"
+  ExploitMitigations:
+    remove-violations-after: 300
+    checks:
+      - "FastConsume"
+      - "FastInventory"
+      - "TransactionChoke"
+      - "CombatStrafe"
+    commands:
+      - "5:10 [alert]"
+      - "1:1 [log]"
+      - "10:0 [webhook]"
+      - "20:0 kick %player% [GroundedGrim] Unfair advantage detected (%check_name%)"
