@@ -19,6 +19,7 @@ public class AuraSnapBack extends Check implements RotationListener {
     private float snapThreshold = 30.0f;
     private float returnTolerance = 3.0f;
     private int returnWindow = 3;
+    private boolean cancelHits = true;
 
     private long lastProcessedAttackTime = 0;
     private int pendingAttackTicks = -1;
@@ -34,6 +35,7 @@ public class AuraSnapBack extends Check implements RotationListener {
         snapThreshold = (float) config.getDoubleElse("AuraSnapBack.snap-threshold", 30.0);
         returnTolerance = (float) config.getDoubleElse("AuraSnapBack.return-tolerance", 3.0);
         returnWindow = config.getIntElse("AuraSnapBack.return-window", 3);
+        cancelHits = config.getBooleanElse("AuraSnapBack.cancel-hits", true);
     }
 
     @Override
@@ -63,7 +65,9 @@ public class AuraSnapBack extends Check implements RotationListener {
             if (sawSpike) {
                 float diff = Math.abs(wrapDegrees(currentYaw - preSpikeYaw));
                 if (diff < returnTolerance) {
-                    flagAndAlert(String.format("spike=%.1f return=%.2f window=%d", spikeAbs, diff, pendingAttackTicks));
+                    if (flagAndAlert(String.format("spike=%.1f return=%.2f window=%d", spikeAbs, diff, pendingAttackTicks))) {
+                        if (cancelHits) player.cancelCombatTicks = 10;
+                    }
                     resetPending();
                 } else if (pendingAttackTicks >= returnWindow) {
                     resetPending();

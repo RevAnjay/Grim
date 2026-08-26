@@ -76,6 +76,20 @@ checks:
   Trigger:
     enabled: true
     # tunables for this check currently live in config.yml (section: Trigger)
+  ClickStatistics:
+    enabled: true
+    buffer: 5.0
+    min-std-dev: 8.0
+    check-no-swing: true
+    cancel-hits: true
+  CrystalAura:
+    enabled: true
+    buffer: 4.0
+    cancel-hits: true
+  AnchorAura:
+    enabled: true
+    buffer: 3.0
+    cancel-hits: true
   WallHit:
     enabled: true
     # tunables for this check currently live in config.yml (section: WallHit)
@@ -341,7 +355,6 @@ checks:
     enabled: true   # experimental
   SprintG:
     enabled: true   # experimental
-
   # ======== Aim ========
   AimDuplicateLook:
     enabled: true
@@ -355,25 +368,46 @@ checks:
     return-tolerance: 3.0
     # Ticks the view must return within to flag.
     return-window: 3
+    # Cancel outgoing attack packets when snap-back is detected.
+    cancel-hits: true
   AimAcceleration:
     # Enable detection of sudden rotations beyond human capability
     enabled: true
-    # Maximum acceleration (degrees per tick squared) before flagging
-    threshold: 900.0
+    # Violations of the set buffer before flagging
+    buffer: 7
+    # Cancel outgoing attack packets when invalid acceleration is detected.
+    cancel-hits: true
+  AimSnap:
+    # Enable detection of snap rotation with invalid acceleration
+    enabled: true
+    # Violations of the set buffer before flagging
+    buffer: 7
+    # Cancel outgoing attack packets when snap rotation is detected.
+    cancel-hits: true
   AimStaticX:
     # Enable detection of flat horizontal rotation without vertical adjustment
     enabled: true
-    # Consecutive ticks without pitch change to trigger detection
-    consecutive-threshold: 20
-    # Minimum accumulated horizontal rotation (degrees) to trigger detection
-    min-horizontal-threshold: 5.0
+    # Violations of the set buffer before flagging
+    buffer: 7
+    decay: 1
+    # Minimum Y rotation delta while X rotation is basically static
+    minDeltaY: 1.0
+    # Maximum X rotation delta
+    maxDeltaX: 0.0001
+    # Cancel outgoing attack packets when static rotation is detected.
+    cancel-hits: true
   AimStaticY:
     # Enable detection of flat vertical rotation without horizontal adjustment
     enabled: true
-    # Consecutive ticks without yaw change to trigger detection
-    consecutive-threshold: 20
-    # Minimum accumulated vertical rotation (degrees) to trigger detection
-    min-vertical-threshold: 5.0
+    # Violations of the set buffer before flagging
+    buffer: 7
+    decay: 1
+    # Minimum X rotation delta while Y rotation is basically static
+    minDeltaX: 1.0
+    # Maximum Y rotation delta
+    maxDeltaY: 0.0001
+    # Cancel outgoing attack packets when static rotation is detected.
+    cancel-hits: true
 
   # ======== Chat ========
   ChatA:

@@ -1,40 +1,126 @@
 package ac.grim.grimac.checks.impl.aim;
 
 import ac.grim.grimac.api.config.ConfigManager;
-import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
+import ac.grim.grimac.checks.type.BlockPlaceCheck;
+import ac.grim.grimac.checks.type.BlockPlaceListener;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
 import ac.grim.grimac.checks.type.RotationListener;
 import ac.grim.grimac.player.GrimPlayer;
+import ac.grim.grimac.utils.anticheat.update.BlockPlace;
 import ac.grim.grimac.utils.anticheat.update.RotationUpdate;
+import com.github.retrooper.packetevents.event.PacketReceiveEvent;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying;
 import org.jetbrains.annotations.NotNull;
 
-@CheckData(name = "AimAcceleration", configName = "AimAcceleration", description = "Detects sudden rotations beyond human capability")
-public class AimAcceleration extends Check implements RotationListener {
-    private double accelerationThreshold = 900.0;
-    private float lastDeltaYaw = 0.0f;
+@CheckData(name = "AimAcceleration", stableKey = "grim.aim.acceleration", description = "Player starts rotating without acceleration.")
+public class AimAcceleration extends BlockPlaceCheck implements RotationListener, PacketReceiveListener, BlockPlaceListener {
 
+    private float lastXRotDelta;
+    private float lastLastXRotDelta;
+    private float xRotAccel;
+    private float lastXRotAccel;
+    // Tick when player starts to rotate.
+    private int startRotatingTicks;
+    // Last tick with a rotation.
+    private float lastRotatingTick;
+    // Last tick with acceleration fail.
+    private int suspiciousRotationTick;
+    private float buffer;
+    private float maxBuffer;
+    private boolean cancelHits = true;
     public AimAcceleration(GrimPlayer player) {
         super(player);
     }
 
     @Override
-    public void onReload(@NotNull ConfigManager config) {
-        accelerationThreshold = config.getDoubleElse("AimAcceleration.threshold", 900.0);
+    public void onPacketReceive(PacketReceiveEvent event) {
+        if (WrapperPlayClientPlayerFlying.isFlying(event.getPacketType())) {
+            WrapperPlayClientPlayerFlying wrapper = new WrapperPlayClientPlayerFlying(event);
+
+            if (!wrapper.hasRotationChanged()) {
+                reset();
+            }
+        } else if (event.getPacketType() == PacketType.Play.Client.INTERACT_ENTITY) {
+            WrapperPlayClientInteractEntity wrapper = new WrapperPlayClientInteractEntity(event);
+
+            if (wrapper.getAction() == WrapperPlayClientInteractEntity.InteractAction.ATTACK)
+                check();
+        }
+    }
+
+    @Override
+    public void onBlockPlace(BlockPlace place) {
+        if (place.isBlock && place.getFace().getModY() == 0)
+            check();
     }
 
     @Override
     public void process(RotationUpdate rotationUpdate) {
-        if (player.packetStateData.lastPacketWasTeleport || player.compensatedEntities.self.getRiding() != null) {
-            lastDeltaYaw = rotationUpdate.getDeltaXRot();
+        // Fix false positives in boats and other entities
+        boolean isRiding = player.compensatedEntities.self.getRiding() != null;
+        float xRotDelta = rotationUpdate.getDeltaXRotABS();
+        float lastLastXRotAccel = lastXRotAccel;
+        lastXRotAccel = xRotAccel;
+        xRotAccel = xRotDelta - lastXRotDelta;
+
+        if (player.packetStateData.lastPacketWasTeleport || xRotDelta == 0 || isRiding)
             return;
+
+        // Last tick player not rotate, he probably sent flying or position packet.
+        if (startRotatingTicks == -1) {
+            // if player trying to simulate shor step in long distance rotation, its suspicious.
+            if (lastXRotDelta > 20 && xRotDelta > 20 && player.getLastTransactionReceived() - lastRotatingTick == 2) {
+                if (flag("Short stop")) {
+                    if (cancelHits) player.cancelCombatTicks = 10;
+                }
+            }
+
+            startRotatingTicks = player.getLastTransactionReceived();
         }
 
-        float deltaYaw = rotationUpdate.getDeltaXRot();
-        double acceleration = Math.abs(deltaYaw - lastDeltaYaw);
-        if (acceleration > accelerationThreshold) {
-            flagAndAlert(String.format("accel=%.1f", acceleration));
+        int startRotatingTickDelta = player.getLastTransactionReceived() - startRotatingTicks;
+
+        // This means that it is second packet after start rotating or more.
+        if (startRotatingTickDelta > 1) {
+            if (lastXRotDelta > 20 && xRotDelta > 20 && xRotAccel < 1 && lastXRotAccel < 1 && lastLastXRotAccel < 1) {
+                if (flag("Linear rotation")) {
+                    if (cancelHits) player.cancelCombatTicks = 10;
+                }
+            }
         }
 
-        lastDeltaYaw = deltaYaw;
+        // Snap rotation check.
+        if (lastXRotDelta < 5 && xRotDelta > 30) {
+            suspiciousRotationTick = player.getLastTransactionReceived();
+        }
+
+        lastRotatingTick = player.getLastTransactionReceived();
+        lastLastXRotDelta = lastXRotDelta;
+        lastXRotDelta = xRotDelta;
+    }
+
+    private void check() {
+        if (player.getLastTransactionReceived() - suspiciousRotationTick <= 2) {
+            buffer++;
+        }
+
+        if (buffer > maxBuffer) {
+            if (flag("Buffer overflow")) {
+                if (cancelHits) player.cancelCombatTicks = 10;
+            }
+        }
+    }
+
+    private void reset() {
+        startRotatingTicks = -1;
+    }
+
+    @Override
+    public void onReload(@NotNull ConfigManager config) {
+        maxBuffer = config.getIntElse(getConfigName() + ".buffer", 7);
+        cancelHits = config.getBooleanElse(getConfigName() + ".cancel-hits", true);
     }
 }

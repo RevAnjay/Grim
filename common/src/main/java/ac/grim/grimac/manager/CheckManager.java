@@ -8,6 +8,7 @@ import ac.grim.grimac.checks.impl.aim.AimDuplicateLook;
 import ac.grim.grimac.checks.impl.aim.AimModulo360;
 import ac.grim.grimac.checks.impl.aim.AuraSnapBack;
 import ac.grim.grimac.checks.impl.aim.AimAcceleration;
+import ac.grim.grimac.checks.impl.aim.AimSnap;
 import ac.grim.grimac.checks.impl.aim.AimStaticX;
 import ac.grim.grimac.checks.impl.aim.AimStaticY;
 import ac.grim.grimac.checks.impl.aim.processor.AimProcessor;
@@ -169,6 +170,9 @@ public class CheckManager {
                 .put(BehaviorD.class, new BehaviorD(player))
                 .put(BehaviorE.class, new BehaviorE(player))
                 .put(TriggerA.class, new TriggerA(player))
+                .put(ClickStatistics.class, new ClickStatistics(player))
+                .put(CrystalAura.class, new CrystalAura(player))
+                .put(AnchorAura.class, new AnchorAura(player))
                 .put(AirStuck.class, new AirStuck(player))
                 .put(ElytraN.class, new ElytraN(player))
                 .put(ElytraO.class, new ElytraO(player))
@@ -183,6 +187,7 @@ public class CheckManager {
                 .put(BehaviorA.class, new BehaviorA(player))
                 .put(AuraSnapBack.class, new AuraSnapBack(player))
                 .put(AimAcceleration.class, new AimAcceleration(player))
+                .put(AimSnap.class, new AimSnap(player))
                 .put(AimStaticX.class, new AimStaticX(player))
                 .put(AimStaticY.class, new AimStaticY(player))
                 .put(VehiclePredictionRunner.class, new VehiclePredictionRunner(player))

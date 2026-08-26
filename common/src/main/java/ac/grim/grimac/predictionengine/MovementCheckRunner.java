@@ -660,6 +660,7 @@ public class MovementCheckRunner extends Check {
         }
 
         player.riptideSpinAttackTicks--;
+        if (player.cancelCombatTicks > 0) player.cancelCombatTicks--;
         if (player.predictedVelocity.isTrident())
             player.riptideSpinAttackTicks = 20;
 

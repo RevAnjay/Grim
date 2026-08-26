@@ -249,6 +249,7 @@ public class GrimPlayer implements GrimUser {
     public long lastBlockBreak;
     public long lastAttackTime = 0;
     public int lastAttackedEntityId = -1;
+    public int cancelCombatTicks = 0;
     public boolean hasRotatedSinceSpawn = false;
     public boolean hasInventoryOpen;
     public long lastInventoryOpen;

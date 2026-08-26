@@ -121,6 +121,12 @@ public class Reach extends Check implements PacketReceiveListener {
             return;
         }
 
+        // Cancel hits if recent aim/killaura anomaly triggered combat cancellation
+        if (shouldModifyPackets() && player.cancelCombatTicks > 0) {
+            event.setCancelled(true);
+            player.onPacketCancel();
+            return;
+        }
         PacketEntity entity = player.compensatedEntities.entityMap.get(entityId);
         // Stop people from freezing transactions before an entity spawns to bypass reach
         // TODO: implement dragon parts?

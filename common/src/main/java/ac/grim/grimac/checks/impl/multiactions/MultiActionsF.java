@@ -29,6 +29,7 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
 
     private final List<FlagData> flags = new ArrayList<>();
     private boolean entity, block;
+    private double buffer = 0;
 
     public MultiActionsF(GrimPlayer player) {
         super(player);
@@ -43,8 +44,10 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
         block = true;
         if (entity) {
             if (!player.canSkipTicks()) {
-                if (flag(writeAction(ACTION_PLACE)) && shouldModifyPackets() && shouldCancel()) {
-                    place.resync();
+                if (++buffer > 1) {
+                    if (flag(writeAction(ACTION_PLACE)) && shouldModifyPackets() && shouldCancel()) {
+                        place.resync();
+                    }
                 }
             } else {
                 flags.add(new FlagData(ACTION_PLACE));
@@ -60,9 +63,11 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
             entity = true;
             if (block) {
                 if (!player.canSkipTicks()) {
-                    if (flag(writeAction(ACTION_ENTITY)) && shouldModifyPackets()) {
-                        event.setCancelled(true);
-                        player.onPacketCancel();
+                    if (++buffer > 1) {
+                        if (flag(writeAction(ACTION_ENTITY)) && shouldModifyPackets()) {
+                            event.setCancelled(true);
+                            player.onPacketCancel();
+                        }
                     }
                 } else {
                     flags.add(new FlagData(ACTION_ENTITY));
@@ -71,6 +76,9 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
         }
 
         if (isTickPacket(event.getPacketType())) {
+            if (!block || !entity) {
+                buffer = Math.max(0, buffer - 0.25);
+            }
             block = entity = false;
         }
     }
@@ -81,8 +89,10 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
             block = true;
             if (entity) {
                 if (!player.canSkipTicks()) {
-                    if (flag(writeAction(ACTION_DIG)) && shouldModifyPackets()) {
-                        blockBreak.cancel();
+                    if (++buffer > 1) {
+                        if (flag(writeAction(ACTION_DIG)) && shouldModifyPackets()) {
+                            blockBreak.cancel();
+                        }
                     }
                 } else {
                     flags.add(new FlagData(ACTION_DIG));
@@ -97,8 +107,12 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
 
         if (player.isTickingReliablyFor(3)) {
             for (FlagData data : flags) {
-                flag(writeAction(data.action()));
+                if (++buffer > 1) {
+                    flag(writeAction(data.action()));
+                }
             }
+        } else {
+            buffer = Math.max(0, buffer - 0.25);
         }
 
         flags.clear();

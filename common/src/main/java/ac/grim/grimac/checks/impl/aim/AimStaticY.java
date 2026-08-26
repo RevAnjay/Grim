@@ -3,55 +3,88 @@ package ac.grim.grimac.checks.impl.aim;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
+import ac.grim.grimac.checks.type.BlockPlaceListener;
+import ac.grim.grimac.checks.type.PacketReceiveListener;
 import ac.grim.grimac.checks.type.RotationListener;
 import ac.grim.grimac.player.GrimPlayer;
+import ac.grim.grimac.utils.anticheat.update.BlockPlace;
 import ac.grim.grimac.utils.anticheat.update.RotationUpdate;
+import com.github.retrooper.packetevents.event.PacketReceiveEvent;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
 import org.jetbrains.annotations.NotNull;
 
-@CheckData(name = "AimStaticY", configName = "AimStaticY", description = "Detects flat vertical rotation without horizontal adjustment")
-public class AimStaticY extends Check implements RotationListener {
-    private int consecutiveNoYawChangeThreshold = 20;
-    private double minVerticalRotationThreshold = 5.0;
+@CheckData(name = "AimStaticY", stableKey = "grim.aim.static_y", description = "Scanned Y rotation while looking horizontally.")
+public class AimStaticY extends Check implements RotationListener, PacketReceiveListener, BlockPlaceListener {
 
-    private int consecutiveNoYawChanges = 0;
-    private double accumulatedVerticalRotation = 0.0;
+    private double buffer = 0;
+    private double decay;
+    private int maxBuffer;
+    private boolean cancelHits = true;
+    private double minDeltaX, maxDeltaY;
+    private double lastDeltaX;
+    private int lastActionTick = -1;
 
-    public AimStaticY(GrimPlayer player) {
-        super(player);
+    public AimStaticY(GrimPlayer playerData) {
+        super(playerData);
+    }
+
+    @Override
+    public void process(final RotationUpdate rotationUpdate) {
+        double deltaX = rotationUpdate.getDeltaXRotABS();
+        double deltaY = rotationUpdate.getDeltaYRotABS();
+        double deltaXAccel = deltaX - lastDeltaX;
+        // Fix false positives in boats and other entities
+        boolean isRiding = player.compensatedEntities.self.getRiding() != null;
+        // In minecraft player cant move to [-90; 90], so it can cause false positives.
+        boolean constantY = Math.abs(rotationUpdate.getTo().pitch()) == 90;
+        // I am not sure that player will do it in the fight.
+        boolean isAwkwardSituation = player.getLastTransactionReceived() - lastActionTick <= 20;
+        boolean wasTeleported = player.packetStateData.lastPacketWasTeleport;
+        boolean bigAccel = deltaXAccel > 10;
+
+        lastDeltaX = deltaX;
+
+        if (isRiding || constantY || bigAccel || !isAwkwardSituation || wasTeleported) {
+            return;
+        }
+
+        if (deltaY <= maxDeltaY && deltaX >= minDeltaX) {
+            if (++buffer > maxBuffer) {
+                if (flag("deltaX=" + deltaX + " deltaY=" + deltaY)) {
+                    if (cancelHits) player.cancelCombatTicks = 10;
+                }
+            }
+        } else {
+            buffer = Math.max(0, buffer - decay);
+
+            if (buffer == 0) {
+                reward();
+            }
+        }
+    }
+
+    @Override
+    public void onPacketReceive(PacketReceiveEvent event) {
+        if (event.getPacketType() == PacketType.Play.Client.INTERACT_ENTITY) {
+            WrapperPlayClientInteractEntity wrapper = new WrapperPlayClientInteractEntity(event);
+            if (wrapper.getAction() == WrapperPlayClientInteractEntity.InteractAction.ATTACK) {
+                lastActionTick = player.getLastTransactionReceived();
+            }
+        }
+    }
+
+    @Override
+    public void onBlockPlace(BlockPlace place) {
+        lastActionTick = player.getLastTransactionReceived();
     }
 
     @Override
     public void onReload(@NotNull ConfigManager config) {
-        consecutiveNoYawChangeThreshold = config.getIntElse("AimStaticY.consecutive-threshold", 20);
-        minVerticalRotationThreshold = config.getDoubleElse("AimStaticY.min-vertical-threshold", 5.0);
-    }
-
-    @Override
-    public void process(RotationUpdate rotationUpdate) {
-        if (player.packetStateData.lastPacketWasTeleport || player.compensatedEntities.self.getRiding() != null) {
-            reset();
-            return;
-        }
-
-        float deltaYaw = Math.abs(rotationUpdate.getDeltaXRot());
-        float deltaPitch = rotationUpdate.getDeltaYRot();
-
-        if (deltaYaw < 0.1f && Math.abs(deltaPitch) > 0.1f) {
-            consecutiveNoYawChanges++;
-            accumulatedVerticalRotation += Math.abs(deltaPitch);
-        } else {
-            reset();
-        }
-
-        if (consecutiveNoYawChanges >= consecutiveNoYawChangeThreshold &&
-                accumulatedVerticalRotation >= minVerticalRotationThreshold) {
-            flagAndAlert(String.format("ticks=%d vertical=%.1f", consecutiveNoYawChanges, accumulatedVerticalRotation));
-            reset();
-        }
-    }
-
-    private void reset() {
-        consecutiveNoYawChanges = 0;
-        accumulatedVerticalRotation = 0.0;
+        maxBuffer = config.getIntElse(getConfigName() + ".buffer", 7);
+        decay = config.getDoubleElse(getConfigName() + ".decay", 1);
+        minDeltaX = config.getDoubleElse(getConfigName() + ".minDeltaX", 1D);
+        maxDeltaY = config.getDoubleElse(getConfigName() + ".maxDeltaY", 0.0001D);
+        cancelHits = config.getBooleanElse(getConfigName() + ".cancel-hits", true);
     }
 }

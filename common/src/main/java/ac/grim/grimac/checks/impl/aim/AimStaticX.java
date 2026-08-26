@@ -8,50 +8,53 @@ import ac.grim.grimac.player.GrimPlayer;
 import ac.grim.grimac.utils.anticheat.update.RotationUpdate;
 import org.jetbrains.annotations.NotNull;
 
-@CheckData(name = "AimStaticX", configName = "AimStaticX", description = "Detects flat horizontal rotation without vertical adjustment")
+@CheckData(name = "AimStaticX", stableKey = "grim.aim.static_x", description = "Scanned X rotation while looking vertically.")
 public class AimStaticX extends Check implements RotationListener {
-    private int consecutiveNoPitchChangeThreshold = 20;
-    private double minHorizontalRotationThreshold = 5.0;
 
-    private int consecutiveNoPitchChanges = 0;
-    private double accumulatedHorizontalRotation = 0.0;
+    private double buffer = 0;
+    private double decay;
+    private int maxBuffer;
+    private boolean cancelHits = true;
+    private double minDeltaY, maxDeltaX;
 
-    public AimStaticX(GrimPlayer player) {
-        super(player);
+    public AimStaticX(GrimPlayer playerData) {
+        super(playerData);
+    }
+
+    @Override
+    public void process(final RotationUpdate rotationUpdate) {
+        double deltaX = rotationUpdate.getDeltaXRotABS();
+        double deltaY = rotationUpdate.getDeltaYRotABS();
+        if (player.compensatedEntities.self.getRiding() != null) {
+            return; // Fix false positives in boats and other entities
+        }
+        if (Math.abs(rotationUpdate.getTo().pitch()) == 90) {
+            return; // Ignore 90 and -90 pitch rotations
+        }
+
+        if (player.packetStateData.lastPacketWasTeleport) {
+            return;
+        }
+        if (deltaX <= maxDeltaX && deltaY >= minDeltaY) {
+            if (++buffer > maxBuffer) {
+                if (flag("deltaX=" + deltaX + " deltaY=" + deltaY)) {
+                    if (cancelHits) player.cancelCombatTicks = 10;
+                }
+            }
+        } else {
+            buffer = Math.max(0, buffer - decay);
+            if (buffer == 0) {
+                reward();
+            }
+        }
     }
 
     @Override
     public void onReload(@NotNull ConfigManager config) {
-        consecutiveNoPitchChangeThreshold = config.getIntElse("AimStaticX.consecutive-threshold", 20);
-        minHorizontalRotationThreshold = config.getDoubleElse("AimStaticX.min-horizontal-threshold", 5.0);
-    }
-
-    @Override
-    public void process(RotationUpdate rotationUpdate) {
-        if (player.packetStateData.lastPacketWasTeleport || player.compensatedEntities.self.getRiding() != null) {
-            reset();
-            return;
-        }
-
-        float deltaPitch = Math.abs(rotationUpdate.getDeltaYRot());
-        float deltaYaw = rotationUpdate.getDeltaXRot();
-
-        if (deltaPitch < 0.1f && Math.abs(deltaYaw) > 0.1f) {
-            consecutiveNoPitchChanges++;
-            accumulatedHorizontalRotation += Math.abs(deltaYaw);
-        } else {
-            reset();
-        }
-
-        if (consecutiveNoPitchChanges >= consecutiveNoPitchChangeThreshold &&
-                accumulatedHorizontalRotation >= minHorizontalRotationThreshold) {
-            flagAndAlert(String.format("ticks=%d horizontal=%.1f", consecutiveNoPitchChanges, accumulatedHorizontalRotation));
-            reset();
-        }
-    }
-
-    private void reset() {
-        consecutiveNoPitchChanges = 0;
-        accumulatedHorizontalRotation = 0.0;
+        maxBuffer = config.getIntElse(getConfigName() + ".buffer", 7);
+        decay = config.getDoubleElse(getConfigName() + ".decay", 1);
+        minDeltaY = config.getDoubleElse(getConfigName() + ".minDeltaY", 1D);
+        maxDeltaX = config.getDoubleElse(getConfigName() + ".maxDeltaX", 0.0001D);
+        cancelHits = config.getBooleanElse(getConfigName() + ".cancel-hits", true);
     }
 }
