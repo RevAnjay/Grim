@@ -214,6 +214,7 @@ WallHit:
     # Blocks to ignore when checking for wall hits
     # These blocks can cause false positives due to state desync
     ignored-blocks:
+      - "COBWEB"
       - "OAK_DOOR"
       - "SPRUCE_DOOR"
       - "BIRCH_DOOR"

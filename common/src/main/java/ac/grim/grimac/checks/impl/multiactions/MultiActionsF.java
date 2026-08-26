@@ -41,10 +41,14 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
 
     @Override
     public void onBlockPlace(BlockPlace place) {
+        // Exclude cobweb from triggering multi-action cancellation for legitimate stun-web tech
+        if (place.material == com.github.retrooper.packetevents.protocol.world.states.type.StateTypes.COBWEB) {
+            return;
+        }
         block = true;
         if (entity) {
             if (!player.canSkipTicks()) {
-                if (++buffer > 1) {
+                if (++buffer > 2) {
                     if (flag(writeAction(ACTION_PLACE)) && shouldModifyPackets() && shouldCancel()) {
                         place.resync();
                     }
@@ -63,7 +67,7 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
             entity = true;
             if (block) {
                 if (!player.canSkipTicks()) {
-                    if (++buffer > 1) {
+                    if (++buffer > 2) {
                         if (flag(writeAction(ACTION_ENTITY)) && shouldModifyPackets()) {
                             event.setCancelled(true);
                             player.onPacketCancel();
@@ -74,7 +78,6 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
                 }
             }
         }
-
         if (isTickPacket(event.getPacketType())) {
             if (!block || !entity) {
                 buffer = Math.max(0, buffer - 0.25);
