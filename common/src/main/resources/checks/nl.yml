@@ -377,6 +377,13 @@ checks:
     buffer: 7
     # Cancel outgoing attack packets when invalid acceleration is detected.
     cancel-hits: true
+  AimGCD:
+    # Enable detection of rotations that do not follow Minecraft hardware sensitivity GCD step quantization
+    enabled: true
+    # Violations of the set buffer before flagging
+    buffer: 5.0
+    # Cancel outgoing attack packets when invalid GCD rotation is detected.
+    cancel-hits: true
   AimSnap:
     # Enable detection of snap rotation with invalid acceleration
     enabled: true

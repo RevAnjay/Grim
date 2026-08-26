@@ -23,6 +23,7 @@ public class BehaviorD extends Check implements PacketReceiveListener {
     private double angleThreshold = 45.0;
     private boolean playersOnly = true;
     private boolean debug = false;
+    private boolean cancelHits = true;
     private final IntList attackQueue = new IntArrayList();
 
     public BehaviorD(GrimPlayer player) {
@@ -34,6 +35,7 @@ public class BehaviorD extends Check implements PacketReceiveListener {
         angleThreshold = config.getDoubleElse("Behavior.d.angle-threshold", 45.0);
         playersOnly = config.getBooleanElse("Behavior.d.players-only", true);
         debug = config.getBooleanElse("Behavior.d.debug", false);
+        cancelHits = config.getBooleanElse("Behavior.d.cancel-hits", true);
     }
 
     @Override
@@ -82,7 +84,11 @@ public class BehaviorD extends Check implements PacketReceiveListener {
             }
 
             if (minAngle >= angleThreshold) {
-                flagAndAlert(String.format("angle=%.1f", minAngle));
+                if (flagAndAlert(String.format("angle=%.1f", minAngle))) {
+                    if (cancelHits && shouldModifyPackets()) {
+                        player.cancelCombatTicks = 10;
+                    }
+                }
             }
         }
         attackQueue.clear();

@@ -386,7 +386,7 @@ Punishments:
     checks:
       - "AimStaticX"
       - "AimStaticY"
-      - "AimAcceleration"
+      - "AimAcceleration", "AimGCD"
       - "AimSnap"
     commands:
       - "20:40 [alert]"

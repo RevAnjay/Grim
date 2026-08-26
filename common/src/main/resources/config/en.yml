@@ -187,6 +187,8 @@ Behavior:
         # 60 = stricter, catches more subtle norot
         # 45 = very strict, may false on fast snaps
         angle-threshold: 45.0
+        # Cancel attacks made outside the angle threshold
+        cancel-hits: true
         # Only check attacks against players?
         players-only: true
         # Debug mode: logs every attack with angle value

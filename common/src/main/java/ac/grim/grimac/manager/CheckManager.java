@@ -8,6 +8,7 @@ import ac.grim.grimac.checks.impl.aim.AimDuplicateLook;
 import ac.grim.grimac.checks.impl.aim.AimModulo360;
 import ac.grim.grimac.checks.impl.aim.AuraSnapBack;
 import ac.grim.grimac.checks.impl.aim.AimAcceleration;
+import ac.grim.grimac.checks.impl.aim.AimGCD;
 import ac.grim.grimac.checks.impl.aim.AimSnap;
 import ac.grim.grimac.checks.impl.aim.AimStaticX;
 import ac.grim.grimac.checks.impl.aim.AimStaticY;
@@ -193,6 +194,7 @@ public class CheckManager {
                 .put(BehaviorA.class, new BehaviorA(player))
                 .put(AuraSnapBack.class, new AuraSnapBack(player))
                 .put(AimAcceleration.class, new AimAcceleration(player))
+                .put(AimGCD.class, new AimGCD(player))
                 .put(AimSnap.class, new AimSnap(player))
                 .put(AimStaticX.class, new AimStaticX(player))
                 .put(AimStaticY.class, new AimStaticY(player))
