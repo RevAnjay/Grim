@@ -189,6 +189,9 @@ Behavior:
     e:
         players-only: true
         debug: false
+        # Maximum fall distance (blocks) that still counts as an "impossible critical".
+        # Higher = flag more aggressively, lower = fewer false positives.
+        min-fall-distance: 0.07
         buffer-threshold: 15
 
 Trigger:

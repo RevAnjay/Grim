@@ -1,6 +1,7 @@
 package ac.grim.grimac.checks.impl.aim;
 
 import ac.grim.grimac.api.config.ConfigManager;
+import ac.grim.grimac.api.storage.verbose.Verbose;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.RotationListener;
@@ -10,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 @CheckData(name = "AimStaticX", stableKey = "grim.aim.static_x", description = "Scanned X rotation while looking vertically.")
 public class AimStaticX extends Check implements RotationListener {
-
+    private static final Verbose V = Verbose.of("deltaX={f64}, deltaY={f64}");
     private double buffer = 0;
     private double decay;
     private int maxBuffer;
@@ -37,7 +38,7 @@ public class AimStaticX extends Check implements RotationListener {
         }
         if (deltaX <= maxDeltaX && deltaY >= minDeltaY) {
             if (++buffer > maxBuffer) {
-                if (flag("deltaX=" + deltaX + " deltaY=" + deltaY)) {
+                if (flag(V.write(verbose()).f64(deltaX).f64(deltaY))) {
                     if (cancelHits) player.cancelCombatTicks = 10;
                 }
             }

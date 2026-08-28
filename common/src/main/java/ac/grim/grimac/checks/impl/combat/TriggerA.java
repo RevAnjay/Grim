@@ -35,7 +35,7 @@ public class TriggerA extends Check implements PacketReceiveListener {
     public void onReload(ConfigManager config) {
         playersOnly = config.getBooleanElse("Trigger.a.players-only", true);
         debug = config.getBooleanElse("Trigger.a.debug", false);
-        windowSize = config.getIntElse("Trigger.a.sample-size", 10);
+        windowSize = Math.min(intervals.length, config.getIntElse("Trigger.a.sample-size", 10));
         maxSpread = config.getIntElse("Trigger.a.max-spread", 50);
     }
 

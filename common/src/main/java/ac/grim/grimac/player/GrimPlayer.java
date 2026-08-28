@@ -975,12 +975,12 @@ public class GrimPlayer implements GrimUser {
 
     @Override
     public double getHorizontalSensitivity() {
-        return checkManager.getCheck(AimProcessor.class).sensitivityX;
+        return checkManager.get(AimProcessor.class).sensitivityX;
     }
 
     @Override
     public double getVerticalSensitivity() {
-        return checkManager.getCheck(AimProcessor.class).sensitivityY;
+        return checkManager.get(AimProcessor.class).sensitivityY;
     }
 
     @Override
@@ -990,7 +990,7 @@ public class GrimPlayer implements GrimUser {
 
     @Override
     public Collection<? extends AbstractCheck> getChecks() {
-        return checkManager.checks.values();
+        return checkManager.checks;
     }
 
     public void runNettyTaskInMs(@NotNull Runnable runnable, int ms) {

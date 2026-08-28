@@ -43,7 +43,7 @@ public class CombatStrafe extends Check implements PacketReceiveListener {
 
     @Override
     public void onReload(@NotNull ConfigManager config) {
-        maxAngleDeviation = config.getDoubleElse(getConfigName() + ".max-angle-deviation", 25.0);
+        maxAngleDeviation = config.getDoubleElse(getConfigName() + ".max-angle-diff", 25.0);
         minSpeed = config.getDoubleElse(getConfigName() + ".min-speed", 0.20);
         maxBuffer = config.getDoubleElse(getConfigName() + ".buffer", 4.0);
         cancelHits = config.getBooleanElse(getConfigName() + ".cancel-hits", true);

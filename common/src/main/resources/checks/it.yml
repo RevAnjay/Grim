@@ -447,8 +447,11 @@ checks:
     enabled: true
   CrashI:
     enabled: true
+  CrashJ:
+    enabled: true
 
   # ======== Exploit ========
+
   ExploitA:
     enabled: true
   ExploitB:

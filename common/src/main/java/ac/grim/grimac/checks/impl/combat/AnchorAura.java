@@ -1,6 +1,7 @@
 package ac.grim.grimac.checks.impl.combat;
 
 import ac.grim.grimac.api.config.ConfigManager;
+import ac.grim.grimac.api.storage.verbose.Verbose;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PacketReceiveListener;
@@ -17,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 @CheckData(name = "AnchorAura", stableKey = "grim.combat.anchor_aura", description = "Detects macro hotbar swap and explode sequence on Respawn Anchors", decay = 0.05)
 public class AnchorAura extends Check implements PacketReceiveListener {
 
+    private static final Verbose V = Verbose.of("swaps={uint}, uses={uint}");
     private int slotSwapsInTick = 0;
     private int anchorUsesInTick = 0;
     private double buffer = 0;
@@ -63,7 +65,7 @@ public class AnchorAura extends Check implements PacketReceiveListener {
                 // Anchor macro pattern: 2+ slot swaps + 2+ anchor uses within the exact same tick
                 if (slotSwapsInTick >= 2 && anchorUsesInTick >= 2 || anchorUsesInTick >= 3) {
                     if (++buffer > maxBuffer) {
-                        if (flag(String.format("swaps=%d uses=%d in 1 tick", slotSwapsInTick, anchorUsesInTick))) {
+                        if (flag(V.write(verbose()).uint(slotSwapsInTick).uint(anchorUsesInTick))) {
                             if (cancelHits) player.cancelCombatTicks = 10;
                         }
                     }

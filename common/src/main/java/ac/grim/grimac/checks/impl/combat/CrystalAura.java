@@ -1,6 +1,7 @@
 package ac.grim.grimac.checks.impl.combat;
 
 import ac.grim.grimac.api.config.ConfigManager;
+import ac.grim.grimac.api.storage.verbose.Verbose;
 import ac.grim.grimac.checks.Check;
 import ac.grim.grimac.checks.CheckData;
 import ac.grim.grimac.checks.type.PacketReceiveListener;
@@ -21,6 +22,8 @@ import org.jetbrains.annotations.NotNull;
 @CheckData(name = "CrystalAura", stableKey = "grim.combat.crystal_aura", description = "Detects impossible multi-action place and break cycles for End Crystals", decay = 0.05)
 public class CrystalAura extends Check implements PacketReceiveListener {
 
+    private static final Verbose V = Verbose.of("places={uint}, attacks={uint}");
+
     private int crystalPlacesInTick = 0;
     private int crystalAttacksInTick = 0;
     private double buffer = 0;
@@ -30,7 +33,6 @@ public class CrystalAura extends Check implements PacketReceiveListener {
     public CrystalAura(GrimPlayer player) {
         super(player);
     }
-
     @Override
     public void onReload(@NotNull ConfigManager config) {
         maxBuffer = config.getDoubleElse(getConfigName() + ".buffer", 4.0);
@@ -72,7 +74,7 @@ public class CrystalAura extends Check implements PacketReceiveListener {
                     // Flag impossible rapid place-break cycles in a single tick without delay
                     if (crystalPlacesInTick >= 1 && crystalAttacksInTick >= 2 || crystalAttacksInTick >= 3) {
                         if (++buffer > maxBuffer) {
-                            if (flag(String.format("places=%d attacks=%d in 1 tick", crystalPlacesInTick, crystalAttacksInTick))) {
+                            if (flag(V.write(verbose()).uint(crystalPlacesInTick).uint(crystalAttacksInTick))) {
                                 if (cancelHits) player.cancelCombatTicks = 10;
                             }
                         }

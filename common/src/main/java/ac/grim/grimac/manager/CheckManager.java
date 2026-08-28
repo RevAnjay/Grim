@@ -2,7 +2,11 @@ package ac.grim.grimac.manager;
 
 import ac.grim.grimac.GrimAPI;
 import ac.grim.grimac.api.AbstractCheck;
+import ac.grim.grimac.api.AbstractProcessor;
 import ac.grim.grimac.checks.Check;
+import org.jetbrains.annotations.NotNull;
+import java.util.Collection;
+import java.util.Collections;
 import ac.grim.grimac.checks.debug.HitboxDebugHandler;
 import ac.grim.grimac.checks.impl.aim.AimDuplicateLook;
 import ac.grim.grimac.checks.impl.aim.AimModulo360;
@@ -79,7 +83,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class CheckManager {
     private static final AtomicBoolean initedAtomic = new AtomicBoolean(false);
     private static boolean inited;
-    public final ClassToInstanceMap<AbstractCheck> checks;
+    public final ClassToInstanceMap<AbstractProcessor> processors;
+    public final Collection<AbstractCheck> checks;
 
     private final PreViaPacketReceiveListener[] preViaPacketReceiveListeners;
     private final PreViaPacketSendListener[] preViaPacketSendListeners;
@@ -96,7 +101,7 @@ public class CheckManager {
     private final PostPredictionListener[] postPredictionListeners;
 
     public CheckManager(GrimPlayer player) {
-        checks = new ImmutableClassToInstanceMap.Builder<AbstractCheck>()
+        processors = new ImmutableClassToInstanceMap.Builder<AbstractProcessor>()
                 .put(CompensatedCameraEntity.class, player.cameraEntity)
                 .put(ChatA.class, new ChatA(player))
                 .put(ChatB.class, new ChatB(player))
@@ -299,7 +304,7 @@ public class CheckManager {
                 .put(EntityPierce.class, new EntityPierce(player)) // EntityPierce is invoked by Reach
                 .put(HitboxDebugHandler.class, new HitboxDebugHandler(player))
                 .build();
-
+        ArrayList<AbstractCheck> checks = new ArrayList<>();
         ArrayList<PreViaPacketReceiveListener> preViaPacketReceiveListeners = new ArrayList<>();
         ArrayList<PreViaPacketSendListener> preViaPacketSendListeners = new ArrayList<>();
         ArrayList<PacketReceiveListener> packetReceiveListeners = new ArrayList<>();
@@ -314,24 +319,29 @@ public class CheckManager {
         ArrayList<BlockBreakListener> blockBreakListeners = new ArrayList<>();
         ArrayList<PostFlyingBlockBreakListener> postFlyingBlockBreakListeners = new ArrayList<>();
 
-        for (AbstractCheck check : checks.values()) {
-            if (check instanceof Check grimCheck && !grimCheck.isApplicable()) continue;
+        for (AbstractProcessor processor : processors.values()) {
+            if (processor instanceof AbstractCheck abstractCheck) {
+                checks.add(abstractCheck);
+                if (processor instanceof Check grimCheck && !grimCheck.isApplicable()) continue;
+            }
 
-            if (check instanceof PacketReceiveListener packetReceiveListener) packetReceiveListeners.add(packetReceiveListener);
-            if (check instanceof PrePredictionPacketReceiveListener prePredictionPacketReceiveListener) prePredictionPacketReceiveListeners.add(prePredictionPacketReceiveListener);
-            if (check instanceof PreViaPacketReceiveListener preViaPacketReceiveListener) preViaPacketReceiveListeners.add(preViaPacketReceiveListener);
-            if (check instanceof PacketSendListener packetSendListener) packetSendListeners.add(packetSendListener);
-            if (check instanceof PreViaPacketSendListener preViaPacketSendListener) preViaPacketSendListeners.add(preViaPacketSendListener);
-            if (check instanceof PositionListener positionListener) positionListeners.add(positionListener);
-            if (check instanceof RotationListener rotationListener) rotationListeners.add(rotationListener);
-            if (check instanceof VehicleListener vehicleListener) vehicleListeners.add(vehicleListener);
-            if (check instanceof PostPredictionListener postPredictionListener) postPredictionListeners.add(postPredictionListener);
-            if (check instanceof BlockPlaceListener blockPlaceListener) blockPlaceListeners.add(blockPlaceListener);
-            if (check instanceof PostFlyingBlockPlaceListener postFlyingBlockPlaceListener) postFlyingBlockPlaceListeners.add(postFlyingBlockPlaceListener);
-            if (check instanceof BlockBreakListener blockBreakListener) blockBreakListeners.add(blockBreakListener);
-            if (check instanceof PostFlyingBlockBreakListener postFlyingBlockBreakListener) postFlyingBlockBreakListeners.add(postFlyingBlockBreakListener);
+            if (processor instanceof PacketReceiveListener packetReceiveListener) packetReceiveListeners.add(packetReceiveListener);
+            if (processor instanceof PrePredictionPacketReceiveListener prePredictionPacketReceiveListener) prePredictionPacketReceiveListeners.add(prePredictionPacketReceiveListener);
+            if (processor instanceof PreViaPacketReceiveListener preViaPacketReceiveListener) preViaPacketReceiveListeners.add(preViaPacketReceiveListener);
+            if (processor instanceof PacketSendListener packetSendListener) packetSendListeners.add(packetSendListener);
+            if (processor instanceof PreViaPacketSendListener preViaPacketSendListener) preViaPacketSendListeners.add(preViaPacketSendListener);
+            if (processor instanceof PositionListener positionListener) positionListeners.add(positionListener);
+            if (processor instanceof RotationListener rotationListener) rotationListeners.add(rotationListener);
+            if (processor instanceof VehicleListener vehicleListener) vehicleListeners.add(vehicleListener);
+            if (processor instanceof PostPredictionListener postPredictionListener) postPredictionListeners.add(postPredictionListener);
+            if (processor instanceof BlockPlaceListener blockPlaceListener) blockPlaceListeners.add(blockPlaceListener);
+            if (processor instanceof PostFlyingBlockPlaceListener postFlyingBlockPlaceListener) postFlyingBlockPlaceListeners.add(postFlyingBlockPlaceListener);
+            if (processor instanceof BlockBreakListener blockBreakListener) blockBreakListeners.add(blockBreakListener);
+            if (processor instanceof PostFlyingBlockBreakListener postFlyingBlockBreakListener) postFlyingBlockBreakListeners.add(postFlyingBlockBreakListener);
         }
 
+        checks.trimToSize();
+        this.checks = Collections.unmodifiableCollection(checks);
         this.preViaPacketReceiveListeners = preViaPacketReceiveListeners.toArray(new PreViaPacketReceiveListener[preViaPacketReceiveListeners.size()]);
         this.preViaPacketSendListeners = preViaPacketSendListeners.toArray(new PreViaPacketSendListener[preViaPacketSendListeners.size()]);
         this.packetReceiveListeners = packetReceiveListeners.toArray(new PacketReceiveListener[packetReceiveListeners.size()]);
@@ -353,7 +363,7 @@ public class CheckManager {
         VerboseRegistry registry = GrimAPI.INSTANCE.getDataStoreLifecycle().verboseRegistry();
         if (registry == null) return;
         registry.registerTemplates(() -> {
-            for (AbstractCheck check : checks.values()) {
+            for (AbstractCheck check : checks) {
                 if (check instanceof Check grimCheck) {
                     grimCheck.registerVerboseTemplates(registry);
                 }
@@ -361,8 +371,13 @@ public class CheckManager {
         });
     }
 
+    public <T extends AbstractProcessor> T get(@NotNull Class<T> check) {
+        return processors.getInstance(check);
+    }
+
+    @SuppressWarnings("unchecked")
     public <T extends AbstractCheck> T getCheck(Class<T> check) {
-        return checks.getInstance(check);
+        return (T) processors.getInstance((Class) check);
     }
 
     public void onPrePredictionReceivePacket(final PacketReceiveEvent packet) {
@@ -483,7 +498,7 @@ public class CheckManager {
                 "grim.nomodifypacket.",
         };
 
-        for (final AbstractCheck check : checks.values()) {
+        for (final AbstractCheck check : checks) {
             if (check.getConfigName() == null) continue;
             final String id = check.getConfigName().toLowerCase();
             for (String permissionName : permissions) {

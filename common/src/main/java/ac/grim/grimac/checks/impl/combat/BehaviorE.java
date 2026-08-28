@@ -19,6 +19,7 @@ public class BehaviorE extends Check implements PacketReceiveListener {
 
     private double buffer = 0;
     private double minFallDistance = 0.07;
+    private double maxBuffer = 2;
     private boolean playersOnly = true;
     private boolean debug = false;
 
@@ -31,6 +32,7 @@ public class BehaviorE extends Check implements PacketReceiveListener {
         playersOnly = config.getBooleanElse("Behavior.e.players-only", true);
         debug = config.getBooleanElse("Behavior.e.debug", false);
         minFallDistance = config.getDoubleElse("Behavior.e.min-fall-distance", 0.07);
+        maxBuffer = config.getDoubleElse("Behavior.e.buffer-threshold", 2);
     }
 
     @Override
@@ -71,7 +73,7 @@ public class BehaviorE extends Check implements PacketReceiveListener {
         }
 
         if (player.fallDistance < minFallDistance) {
-            if (++buffer > 2) {
+            if (++buffer > maxBuffer) {
                 if (debug) {
                     LogUtil.info("[BehaviorE] " + player.getName()
                             + String.format(" fd=%.6f buf=%.0f", player.fallDistance, buffer));

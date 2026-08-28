@@ -30,7 +30,7 @@ public class CrashJ extends Check implements PacketReceiveListener {
             if (player.packetStateData.lastPacketWasOnePointSeventeenDuplicate) {
                 // No setCancelled: the duplicate has no authoritative position to drop, so counting it
                 // toward the spam kick cannot desync a legit client.
-                if (++duplicates > MAX_DUPLICATES_BETWEEN_TICKS) player.onPacketCancel();
+                if (++duplicates > MAX_DUPLICATES_BETWEEN_TICKS && shouldModifyPackets()) player.onPacketCancel();
             } else if (!player.packetStateData.lastPacketWasTeleport) {
                 duplicates = 0; // a real movement packet marks a new tick boundary
             }

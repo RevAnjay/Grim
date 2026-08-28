@@ -109,9 +109,13 @@ public class MultiActionsF extends BlockPlaceCheck implements PacketReceiveListe
         if (!player.canSkipTicks()) return;
 
         if (player.isTickingReliablyFor(3)) {
-            for (FlagData data : flags) {
-                if (++buffer > 1) {
-                    flag(writeAction(data.action()));
+            if (flags.isEmpty()) {
+                buffer = Math.max(0, buffer - 0.25);
+            } else {
+                for (FlagData data : flags) {
+                    if (++buffer > 1.0) {
+                        flag(writeAction(data.action()));
+                    }
                 }
             }
         } else {

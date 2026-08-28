@@ -400,6 +400,7 @@ Punishments:
       - "!AimStaticY"
       - "!AimAcceleration"
       - "!AimSnap"
+      - "!AimGCD"
     commands:
       - "20:40 [alert]"
       - "1:1 [log]"
@@ -408,7 +409,8 @@ Punishments:
     checks:
       - "AimStaticX"
       - "AimStaticY"
-      - "AimAcceleration", "AimGCD"
+      - "AimAcceleration"
+      - "AimGCD"
       - "AimSnap"
     commands:
       - "20:40 [alert]"

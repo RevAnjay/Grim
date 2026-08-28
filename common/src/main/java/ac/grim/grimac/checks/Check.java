@@ -306,53 +306,6 @@ public class Check extends GrimProcessor implements AbstractCheck {
         return offset > 0.001 ? String.format("%.5f", offset) : String.format("%.2E", offset);
     }
 
-    public static boolean isTransaction(PacketTypeCommon packetType) {
-        return packetType == PacketType.Play.Client.PONG ||
-                packetType == PacketType.Play.Client.WINDOW_CONFIRMATION;
-    }
-
-    public static boolean isAsync(PacketTypeCommon packetType) {
-        return packetType == PacketType.Play.Client.KEEP_ALIVE
-                || packetType == PacketType.Play.Client.CHUNK_BATCH_ACK
-                || packetType == PacketType.Play.Client.RESOURCE_PACK_STATUS;
-    }
-
-    public boolean isUpdate(PacketTypeCommon packetType) {
-        return isFlying(packetType)
-                || packetType == PacketType.Play.Client.CLIENT_TICK_END
-                || isTransaction(packetType);
-    }
-
-    public boolean isTickPacket(PacketTypeCommon packetType) {
-        if (isTickPacketIncludingNonMovement(packetType)) {
-            if (isFlying(packetType)) {
-                return !player.packetStateData.lastPacketWasTeleport && !player.packetStateData.lastPacketWasOnePointSeventeenDuplicate;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    public boolean isTickPacketIncludingNonMovement(PacketTypeCommon packetType) {
-        // On 1.21.2+ fall back to the TICK_END packet IF the player did not send a movement packet for their tick
-        // TickTimer checks to see if player did not send a tick end packet before new flying packet is sent
-        if (player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_21_2)
-                && !player.packetStateData.didSendMovementBeforeTickEnd) {
-            if (packetType == PacketType.Play.Client.CLIENT_TICK_END) {
-                return true;
-            }
-        }
-
-        return isFlying(packetType);
-    }
-
-    // prevent causing exploits with packet cancelling (ie noslow)
-    public boolean canCancel(DiggingAction action) {
-        return action != DiggingAction.RELEASE_USE_ITEM
-                // we check client version here because 1.8- doesn't predict dropping items, so we can cancel them. (see CompensatedInventory)
-                && (action != DiggingAction.DROP_ITEM && action != DiggingAction.DROP_ITEM_STACK || player.getClientVersion().isOlderThanOrEquals(ClientVersion.V_1_8));
-    }
-
     private static @NotNull Supplier<String> constant(String verbose) {
         String value = verbose == null ? "" : verbose;
         return () -> value;
